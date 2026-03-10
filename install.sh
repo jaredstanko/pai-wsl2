@@ -32,14 +32,34 @@ echo "============================================"
 echo -e "${NC}"
 
 # -----------------------------------------------------------
-# Step 1: System packages
+# Step 1: Disable Windows drive automount (security)
+# -----------------------------------------------------------
+log "Disabling Windows drive automount (/mnt/c/) for isolation..."
+if grep -q '\[automount\]' /etc/wsl.conf 2>/dev/null; then
+    # Update existing automount section
+    sudo sed -i 's/^enabled\s*=.*/enabled=false/' /etc/wsl.conf
+    if ! grep -q 'enabled=false' /etc/wsl.conf; then
+        sudo sed -i '/\[automount\]/a enabled=false' /etc/wsl.conf
+    fi
+else
+    sudo tee -a /etc/wsl.conf >/dev/null <<'WSLCONF'
+
+[automount]
+enabled=false
+WSLCONF
+fi
+log "Windows drives will NOT be mounted at /mnt/c/ after next WSL restart."
+warn "File transfer uses the claude-workspace symlink on Windows, not /mnt/c/."
+
+# -----------------------------------------------------------
+# Step 2: System packages
 # -----------------------------------------------------------
 log "Installing system packages..."
 sudo apt-get update -qq
 sudo apt-get install -y -qq curl git zip jq tree tmux wget whois dnsutils imagemagick ffmpeg python3-venv wslu
 
 # -----------------------------------------------------------
-# Step 2: Audio setup (WSLg / PulseAudio)
+# Step 3: Audio setup (WSLg / PulseAudio)
 # -----------------------------------------------------------
 log "Configuring audio for WSL2..."
 
@@ -70,7 +90,7 @@ CONF
 fi
 
 # -----------------------------------------------------------
-# Step 3: Bun
+# Step 4: Bun
 # -----------------------------------------------------------
 if command -v bun &>/dev/null; then
     log "Bun already installed: $(bun --version)"
@@ -85,7 +105,7 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # -----------------------------------------------------------
-# Step 4: Claude Code
+# Step 5: Claude Code
 # -----------------------------------------------------------
 if command -v claude &>/dev/null; then
     log "Claude Code already installed: $(claude --version 2>/dev/null || echo 'installed')"
@@ -100,7 +120,7 @@ warn "After this script finishes, run 'claude' to authenticate with your Anthrop
 echo ""
 
 # -----------------------------------------------------------
-# Step 5: PAI v4.0
+# Step 6: PAI v4.0
 # -----------------------------------------------------------
 if [ -d "$HOME/.claude/PAI" ] || [ -d "$HOME/.claude/skills/PAI" ]; then
     log "PAI appears to be already installed. Skipping."
@@ -135,7 +155,86 @@ fi
 source ~/.bashrc 2>/dev/null || true
 
 # -----------------------------------------------------------
-# Step 6: PAI Companion (no Docker)
+# Step 6b: Claude Code sandbox — restrict to VM + shared folder
+# -----------------------------------------------------------
+# Runs AFTER PAI install to avoid being overwritten by cp -r .claude/
+log "Configuring Claude Code filesystem sandbox..."
+if [ -f ~/.claude/settings.json ]; then
+    # Merge sandbox config into existing settings using jq
+    if command -v jq &>/dev/null; then
+        jq '. * {
+          "permissions": { "deny": ["Read(//mnt/**)", "Edit(//mnt/**)"] },
+          "sandbox": {
+            "enabled": true,
+            "filesystem": {
+              "allowWrite": ["~", "//tmp"],
+              "denyRead": ["//mnt"],
+              "denyWrite": ["//mnt"]
+            }
+          }
+        }' ~/.claude/settings.json > ~/.claude/settings.json.tmp \
+            && mv ~/.claude/settings.json.tmp ~/.claude/settings.json
+        log "Merged sandbox config into existing settings.json."
+    else
+        warn "jq not found — writing sandbox settings.json (existing settings may be lost)."
+        cat > ~/.claude/settings.json <<'SETTINGS'
+{
+  "permissions": {
+    "deny": [
+      "Read(//mnt/**)",
+      "Edit(//mnt/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "allowWrite": [
+        "~",
+        "//tmp"
+      ],
+      "denyRead": [
+        "//mnt"
+      ],
+      "denyWrite": [
+        "//mnt"
+      ]
+    }
+  }
+}
+SETTINGS
+    fi
+else
+    mkdir -p ~/.claude
+    cat > ~/.claude/settings.json <<'SETTINGS'
+{
+  "permissions": {
+    "deny": [
+      "Read(//mnt/**)",
+      "Edit(//mnt/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "allowWrite": [
+        "~",
+        "//tmp"
+      ],
+      "denyRead": [
+        "//mnt"
+      ],
+      "denyWrite": [
+        "//mnt"
+      ]
+    }
+  }
+}
+SETTINGS
+fi
+log "Claude Code sandboxed: /mnt/ blocked at both permission and OS level."
+
+# -----------------------------------------------------------
+# Step 7: PAI Companion (no Docker)
 # -----------------------------------------------------------
 log "Installing PAI Companion..."
 cd /tmp
@@ -263,7 +362,7 @@ cd ~/.claude && git init -q && git add -A && git commit -q -m "Initial PAI confi
 rm -rf /tmp/pai-companion
 
 # -----------------------------------------------------------
-# Step 7: Playwright (optional but recommended)
+# Step 8: Playwright (optional but recommended)
 # -----------------------------------------------------------
 log "Installing Playwright..."
 if command -v bun &>/dev/null; then

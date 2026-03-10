@@ -11,6 +11,7 @@ This is the Windows/WSL2 adaptation of [pai-lima](https://github.com/quinn-pai/p
 - **PAI v4.0** — [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure)
 - **PAI Companion** — [Web portal, file exchange, context enhancements](https://github.com/chriscantey/pai-companion) (portal served via Bun, not Docker)
 - **Shared folder** — `/home/claude` shared with the Windows host as `~/claude-workspace`
+- **Filesystem isolation** — Windows drives (`/mnt/c/`) disabled; Claude Code sandboxed to the VM
 
 ## Prerequisites
 
@@ -58,13 +59,14 @@ bash ~/install.sh
 
 The script installs (in order):
 
-1. **System packages** — curl, git, zip, jq, tree, tmux, ffmpeg, imagemagick, wslu, etc.
-2. **Audio** — WSLg auto-detection or PulseAudio TCP bridge setup
-3. **Bun** — JavaScript runtime
-4. **Claude Code** — Anthropic's CLI
-5. **PAI v4.0** — clones the latest release and runs the installer in CLI mode
-6. **PAI Companion** — clones the companion repo, sets up portal/exchange/work directories, starts the portal web server on port 8080 using Bun (no Docker)
-7. **Playwright** — browser automation with Chromium
+1. **Filesystem isolation** — disables Windows drive automount (`/mnt/c/`) via `/etc/wsl.conf`
+2. **System packages** — curl, git, zip, jq, tree, tmux, ffmpeg, imagemagick, wslu, etc.
+3. **Audio** — WSLg auto-detection or PulseAudio TCP bridge setup
+4. **Bun** — JavaScript runtime
+5. **Claude Code** — Anthropic's CLI, plus sandbox config blocking `/mnt/` at both permission and OS level
+6. **PAI v4.0** — clones the latest release and runs the installer in CLI mode
+7. **PAI Companion** — clones the companion repo, sets up portal/exchange/work directories, starts the portal web server on port 8080 using Bun (no Docker)
+8. **Playwright** — browser automation with Chromium
 
 ### After installation
 
@@ -182,6 +184,24 @@ wsl --import Ubuntu-24.04-restored C:\WSL\restored pai-backup.tar
 ~/upstream/          Reference repos (PAI, TheAlgorithm)
 ~/.claude/           PAI configuration and skills
 ```
+
+## Filesystem Isolation
+
+By default, WSL2 mounts the Windows C: drive at `/mnt/c/`, which would give Claude Code read/write access to your entire Windows filesystem. This project disables that with two layers of defense:
+
+**Layer 1: Disable automount** (`/etc/wsl.conf` inside WSL2)
+```ini
+[automount]
+enabled=false
+```
+Windows drives are never mounted. File transfer between Windows and WSL2 uses the `claude-workspace` symlink (via `\\wsl$\`) instead.
+
+**Layer 2: Claude Code sandbox** (`~/.claude/settings.json`)
+- **Permissions**: `Read(//mnt/**)` and `Edit(//mnt/**)` denied — Claude's tools refuse to touch `/mnt/`
+- **OS sandbox**: `denyRead` and `denyWrite` on `/mnt/` — Bash subprocesses blocked at the OS level (Linux bubblewrap)
+- **Write scope**: limited to `~` (home directory) and `/tmp`
+
+**Limitations**: Both layers live inside the VM. An agent with root shell access could theoretically modify `/etc/wsl.conf` or `~/.claude/settings.json`. These are defense-in-depth measures that prevent accidental access, not a hard security boundary against a compromised agent.
 
 ## Differences from pai-lima (macOS)
 
