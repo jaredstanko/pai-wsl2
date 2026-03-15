@@ -212,7 +212,7 @@ Windows drives are never mounted. File transfer between Windows and WSL2 uses th
 | Audio | VirtIO sound device | WSLg (Win 11) or PulseAudio TCP (Win 10) |
 | Shared folder | Lima mount (`~/claude-workspace`) | `/home/claude` via symlink (`~/claude-workspace` on host) |
 | Port forwarding | Manual (VM IP) | Automatic (localhost) |
-| VM config | `linux.yaml` | `.wslconfig` |
+| VM config | `pai.yaml` | `.wslconfig` |
 | Setup script | `brew install lima` | `setup-wsl.ps1` (PowerShell) |
 
 ## Troubleshooting
