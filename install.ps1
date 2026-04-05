@@ -257,6 +257,83 @@ if ($wtPackage) {
     }
 }
 
+# --- Hack Nerd Font --- (needed for PAI/Claude Code UI glyphs)
+$fontName = "Hack Nerd Font"
+$fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
+$regPath = "HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+$fontInstalled = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue | Where-Object { $_.PSObject.Properties.Name -match "Hack" }
+
+if ($fontInstalled) {
+    Write-Skip "Hack Nerd Font"
+} else {
+    Write-Host "        Installing Hack Nerd Font (needed for terminal glyphs)..."
+    try {
+        $fontZipUrl = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Hack.zip"
+        $fontZip = "$env:TEMP\HackNerdFont.zip"
+        $fontExtract = "$env:TEMP\HackNerdFont"
+
+        Invoke-WithRetry -Description "Hack Nerd Font download" -Action {
+            Invoke-WebRequest -Uri $fontZipUrl -OutFile $fontZip -UseBasicParsing
+        }
+
+        if (Test-Path $fontExtract) { Remove-Item -Recurse -Force $fontExtract }
+        Expand-Archive -Path $fontZip -DestinationPath $fontExtract -Force
+
+        # Per-user install (no admin needed)
+        if (-not (Test-Path $fontDir)) {
+            New-Item -ItemType Directory -Path $fontDir -Force | Out-Null
+        }
+
+        $installed = 0
+        Get-ChildItem "$fontExtract\*.ttf" | ForEach-Object {
+            Copy-Item $_.FullName -Destination $fontDir -Force
+            $displayName = $_.BaseName -replace "NerdFont-", " Nerd Font "
+            New-ItemProperty -Path $regPath -Name $displayName -Value (Join-Path $fontDir $_.Name) -PropertyType String -Force | Out-Null
+            $installed++
+        }
+
+        # Clean up
+        Remove-Item -Force $fontZip -ErrorAction SilentlyContinue
+        Remove-Item -Recurse -Force $fontExtract -ErrorAction SilentlyContinue
+
+        Write-Ok "Hack Nerd Font installed ($installed files)"
+    }
+    catch {
+        Write-Host "        " -NoNewline
+        Write-Host "[WARN] " -ForegroundColor Yellow -NoNewline
+        Write-Host "Could not install Hack Nerd Font: $_"
+        Write-Host "        You can install it manually from https://www.nerdfonts.com/font-downloads"
+    }
+}
+
+# Set Hack Nerd Font as Windows Terminal default if WT is installed
+if ($wtInstalled) {
+    try {
+        $wtSettingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+        if (Test-Path $wtSettingsPath) {
+            $wtSettings = Get-Content $wtSettingsPath -Raw | ConvertFrom-Json
+            $currentFont = $null
+            if ($wtSettings.profiles -and $wtSettings.profiles.defaults) {
+                $currentFont = $wtSettings.profiles.defaults.font
+            }
+            if (-not $currentFont -or -not ("$currentFont" -match "Hack")) {
+                # Add font to defaults profile
+                if (-not $wtSettings.profiles.defaults) {
+                    $wtSettings.profiles | Add-Member -NotePropertyName "defaults" -NotePropertyValue @{} -Force
+                }
+                $wtSettings.profiles.defaults | Add-Member -NotePropertyName "font" -NotePropertyValue @{ face = "Hack Nerd Font" } -Force
+                $wtSettings | ConvertTo-Json -Depth 10 | Set-Content $wtSettingsPath -Encoding UTF8
+                Write-Ok "Windows Terminal font set to Hack Nerd Font"
+            } else {
+                Write-Skip "Windows Terminal already uses Hack Nerd Font"
+            }
+        }
+    }
+    catch {
+        Write-Log "Could not set WT font: $_"
+    }
+}
+
 # ═════════════════════════════════════════════════════════════════════════════
 # Step 3: Create .wslconfig if not present
 # ═════════════════════════════════════════════════════════════════════════════
@@ -688,6 +765,15 @@ Write-Host "       exchange\            File exchange with Windows" -ForegroundC
 Write-Host "       portal\              Web portal content" -ForegroundColor DarkGray
 Write-Host "       work\                Working projects" -ForegroundColor DarkGray
 Write-Host "       upstream\            Upstream repos" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  PAI-Status tray app:" -ForegroundColor White
+Write-Host "     Look for the PAI icon in the system tray (bottom right)." -ForegroundColor DarkGray
+Write-Host "     Right-click it to start sessions, check health, and more." -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  Terminal font:" -ForegroundColor White
+Write-Host "     Hack Nerd Font has been installed and set as the default" -ForegroundColor DarkGray
+Write-Host "     in Windows Terminal. If glyphs look wrong, make sure your" -ForegroundColor DarkGray
+Write-Host "     terminal is using 'Hack Nerd Font' (Settings > Profiles > Font)." -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Useful commands:" -ForegroundColor White
 Write-Host "     wsl -d $DistroName                    # Enter sandbox" -ForegroundColor DarkGray
