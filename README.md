@@ -24,7 +24,7 @@ graph TB
     pai -->|shared folders| workspace
     explorer -->|browse files| workspace
     browser -->|localhost:8080| portal
-    voice -->|WSLg audio passthrough| win
+    voice -->|audio passthrough| win
 ```
 
 **The key idea:** Your AI runs in a sandbox (a mini Linux computer inside your Windows PC). Your files stay on your Windows machine in `C:\pai-workspace\`. The AI can read and write to those files, but it can't touch anything else on your PC.
@@ -89,7 +89,7 @@ Wait for it to finish. This takes a few minutes.
 
 ### Step 5: You're Done
 
-Open http://localhost:8080 in your browser to see the web portal. From now on, just run `.\scripts\launch.ps1` in PowerShell whenever you want to talk to your AI.
+Open http://localhost:8080 in your browser to see the web portal. Look for the PAI-Status icon in your system tray (bottom right, near the clock). From now on, just click **New PAI Session** in the tray menu, or run `.\scripts\launch.ps1` in PowerShell.
 
 ---
 
@@ -138,9 +138,7 @@ C:\pai-workspace\
   upstream\    Reference repos
 ```
 
-AI settings and memory live inside the WSL2 distro at `/home/claude/.claude` (on the fast ext4 filesystem). Your workspace files live on Windows. You can browse them in Explorer like any other folder.
-
-You can browse these folders in Windows Explorer just like any other folder on your PC.
+AI settings and memory live inside the WSL2 distro at `/home/claude/.claude` (on the fast ext4 filesystem). Your workspace files live on Windows. You can browse them in Explorer like any other folder on your PC.
 
 ### Sharing Additional Folders
 
@@ -161,20 +159,14 @@ This adds the folder as a bind mount inside the distro. Your directory then appe
 
 ### Copying Files
 
-To copy individual files in or out:
+To copy individual files in or out, just use the shared `C:\pai-workspace\` folder. Drop files into `C:\pai-workspace\exchange\` on Windows and they appear at `/home/claude/exchange/` inside the distro (and vice versa).
+
+You can also copy from the Windows side using the `\\wsl$\` path:
 
 ```powershell
-# Copy a file from Windows into the distro
-wsl.exe -d pai cp /mnt/c/Users/You/Desktop/myfile.txt /home/claude/exchange/
-
-# Copy a file from the distro to Windows
-wsl.exe -d pai cp /home/claude/work/output.pdf /mnt/c/Users/You/Desktop/
-
-# Copy an entire folder (use -r)
-wsl.exe -d pai cp -r /home/claude/work/my-project /mnt/c/Users/You/Desktop/
+# Copy a file from the distro to your Desktop
+copy \\wsl$\pai\home\claude\work\output.pdf $env:USERPROFILE\Desktop\
 ```
-
-Or just use the shared `C:\pai-workspace\` folder -- both sides can read and write to it.
 
 ---
 
@@ -293,13 +285,13 @@ wsl.exe --shutdown
 
 **WSL2 not available** -- Make sure virtualization is enabled in your BIOS/UEFI settings. Run `wsl.exe --install` from an admin PowerShell to enable WSL2.
 
-**No audio** -- On **Windows 11**, audio uses WSLg automatically. Run `wsl.exe -d pai -- pactl info` to check PulseAudio. If it fails, restart WSL with `wsl.exe --shutdown` and try again. On **Windows 10**, audio falls back to PowerShell passthrough — the AI writes audio files to `C:\temp\pai-audio\` and plays them via Windows APIs. This works automatically with no setup required.
+**No audio** -- On **Windows 11**, audio uses WSLg automatically. Run `wsl.exe -d pai -- pactl info` to check PulseAudio. If it fails, restart WSL with `wsl.exe --shutdown` and try again. On **Windows 10**, the installer asks if you want audio enabled (it requires reducing sandbox isolation). If you said yes, audio plays via PowerShell passthrough automatically.
 
 **Web portal not loading** -- Make sure the distro is running (`wsl.exe -l -v` should show "Running"), then try http://localhost:8080.
 
 **Distro shows as "Stopped"** -- Run `wsl.exe -d pai` to start it, or `.\scripts\launch.ps1`.
 
-**Slow file access in shared folders** -- This is normal for cross-OS file access in WSL2. For best performance on large projects, clone repos inside the distro (`/home/claude/`) rather than in `/mnt/c/`.
+**Slow file access in shared folders** -- This is normal for cross-OS file access in WSL2. For best performance on large projects, clone repos inside the distro (`/home/claude/`) rather than in the shared workspace.
 
 ## Credits
 
