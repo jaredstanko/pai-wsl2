@@ -93,12 +93,15 @@ if (-not (Test-Path $provisionScript)) {
     exit 1
 }
 
-$wslScriptDir = ConvertTo-WslPath $ScriptDir
-$ntfsWorkspace = ConvertTo-WslPath $Workspace
+# Copy provision.sh into the distro (can't use /mnt/c/ — automount is disabled)
+$provisionContent = Get-Content $provisionScript -Raw
+wsl.exe -d $DistroName -u root -- bash -c "cat > /tmp/provision.sh << 'PROVISION_EOF'
+$provisionContent
+PROVISION_EOF"
+wsl.exe -d $DistroName -u root -- bash -c "chmod +x /tmp/provision.sh"
 
-# Copy and run provision.sh
-wsl.exe -d $DistroName -- bash -c "cp '$wslScriptDir/provision.sh' ~/provision.sh && chmod +x ~/provision.sh"
-wsl.exe -d $DistroName -- bash -lc "NTFS_WORKSPACE='$ntfsWorkspace' bash ~/provision.sh"
+# Run provision as claude user
+wsl.exe -d $DistroName -u claude -- bash /tmp/provision.sh
 
 if ($LASTEXITCODE -eq 0) {
     Ok "Provision script completed successfully"

@@ -1,14 +1,12 @@
 # PAI-WSL2 — Dynamic Folder Sharing
-# Since WSL2 can access all of C:\ via /mnt/c/, "mounting" means creating
-# a symlink inside the distro pointing to the Windows path.
+# Adds an fstab entry to mount a Windows directory into the distro.
+# Requires a distro restart (~2 seconds) to apply the mount.
 #
 # Usage:
 #   .\scripts\mount.ps1 C:\Projects\my-repo                    # Mount as ~/my-repo
 #   .\scripts\mount.ps1 C:\Projects\my-repo /home/claude/code  # Mount at specific path
-#   .\scripts\mount.ps1 -List                                  # Show current symlinks
+#   .\scripts\mount.ps1 -List                                  # Show current mounts
 #   .\scripts\mount.ps1 -Name v2 C:\Projects\my-repo           # Target named instance
-#
-# Unlike PAI-LIMA, no restart is needed — WSL2 always has /mnt/c/ available.
 #
 # PowerShell 5.1 compatible.
 
@@ -88,9 +86,6 @@ if (-not (Test-Path $HostPath -PathType Container)) {
 
 $resolvedPath = (Resolve-Path $HostPath).Path
 
-# Convert to WSL path: C:\foo\bar -> /mnt/c/foo/bar
-$wslSourcePath = ConvertTo-WslPath $resolvedPath
-
 # Default WSL mount path: /home/claude/<dirname>
 if (-not $WslMountPath) {
     $dirName = Split-Path -Leaf $resolvedPath
@@ -111,15 +106,14 @@ if ($status -ne 'Running') {
     Start-Sleep -Seconds 1
 }
 
-# Check if symlink already exists
-$existingTarget = wsl.exe -d $DistroName -- bash -lc "readlink '$WslMountPath' 2>/dev/null || echo ''" 2>&1
-$existingTarget = "$existingTarget".Trim()
-if ($existingTarget -eq $wslSourcePath) {
-    Warn "Already mounted: $WslMountPath -> $wslSourcePath"
+# Check if already in fstab
+$fstabCheck = wsl.exe -d $DistroName -u root -- bash -c "grep -q '$resolvedPath' /etc/fstab 2>/dev/null && echo YES || echo NO" 2>&1
+if ("$fstabCheck".Trim() -eq 'YES') {
+    Warn "Already mounted: $resolvedPath -> $WslMountPath"
     exit 0
 }
 
-# ─── Create symlink ────────────────────────────────────────────────────────
+# ─── Add fstab entry and restart ──────────────────────────────────────────
 
 Write-Host ""
 Write-Host "Mounting directory into $DistroName :" -ForegroundColor White
@@ -128,28 +122,30 @@ Write-Host "  Windows: $resolvedPath"
 Write-Host "  WSL:     $WslMountPath"
 Write-Host ""
 
-# If there's an existing symlink pointing elsewhere, remove it
-if ($existingTarget) {
-    Write-Host "  Removing existing symlink ($existingTarget)..."
-    wsl.exe -d $DistroName -- bash -lc "rm -f '$WslMountPath'" 2>$null
-}
+# Create mount point inside distro
+wsl.exe -d $DistroName -u root -- bash -c "mkdir -p '$WslMountPath'" 2>$null
 
-# Create the symlink
-wsl.exe -d $DistroName -- bash -lc "ln -sf '$wslSourcePath' '$WslMountPath'"
+# Add fstab entry
+$fstabLine = "$resolvedPath $WslMountPath drvfs defaults,metadata,uid=1000,gid=1000 0 0"
+wsl.exe -d $DistroName -u root -- bash -c "echo '$fstabLine' >> /etc/fstab"
 
-if ($LASTEXITCODE -eq 0) {
-    Ok "Symlink created"
-}
-else {
-    Fail "Failed to create symlink"
+if ($LASTEXITCODE -ne 0) {
+    Fail "Failed to add fstab entry"
     exit 1
 }
+Ok "fstab entry added"
+
+# Restart distro to apply mount
+Write-Host "  Restarting distro to apply mount..."
+wsl.exe --terminate $DistroName 2>&1 | Out-Null
+Start-Sleep -Seconds 2
+wsl.exe -d $DistroName -- echo 'restarted' 2>&1 | Out-Null
+Ok "Distro restarted"
 
 Write-Host ""
 Write-Host "Done! Your directory is now available in WSL at:" -ForegroundColor Green
 Write-Host ""
 Write-Host "  $WslMountPath"
 Write-Host ""
-Write-Host "  No restart needed — changes are immediate."
-Write-Host "  Any changes on Windows are instantly visible in WSL, and vice versa."
+Write-Host "  Changes on Windows are visible in WSL, and vice versa."
 Write-Host ""

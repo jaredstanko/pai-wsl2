@@ -150,9 +150,13 @@ else {
     # Copy verify.sh into the distro and run it, parsing its output
     $verifyScript = Join-Path $ScriptDir 'verify.sh'
     if (Test-Path $verifyScript) {
-        # Convert script path to WSL path and run it
-        $wslScriptDir = ConvertTo-WslPath $ScriptDir
-        $output = wsl.exe -d $DistroName -- bash -l "$wslScriptDir/verify.sh" 2>&1
+        # Copy verify.sh into distro and run it (can't use /mnt/c/ — automount disabled)
+        $verifyContent = Get-Content $verifyScript -Raw
+        wsl.exe -d $DistroName -u root -- bash -c "cat > /tmp/verify.sh << 'VERIFY_EOF'
+$verifyContent
+VERIFY_EOF"
+        wsl.exe -d $DistroName -u root -- bash -c "chmod +x /tmp/verify.sh"
+        $output = wsl.exe -d $DistroName -u claude -- bash /tmp/verify.sh 2>&1
 
         # Display the raw output from verify.sh and count its PASS/FAIL
         foreach ($line in $output) {

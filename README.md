@@ -150,7 +150,7 @@ To give the AI permanent access to a project folder on your Windows machine:
 .\scripts\mount.ps1 C:\Projects\my-repo
 ```
 
-This adds the folder as a bind mount inside the distro. Your directory then appears at `/home/claude/my-repo` inside the distro with live two-way access.
+This adds the folder to the distro's mount table and restarts the distro briefly (~2 seconds). Your directory then appears at `/home/claude/my-repo` inside the distro with live two-way access.
 
 ```powershell
 .\scripts\mount.ps1 -List                                          # See what's shared
