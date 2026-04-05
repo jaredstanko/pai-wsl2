@@ -245,8 +245,8 @@ Removes the WSL2 distro and launch scripts. Asks before deleting workspace data.
 | CPUs | 4 |
 | Memory | 4 GB |
 | Disk | 50 GB (virtual hard disk) |
-| Audio | WSLg PulseAudio passthrough |
-| Display | WSLg Wayland/X11 passthrough |
+| Audio | WSLg (Win 11) / PowerShell passthrough (Win 10) |
+| Display | WSLg Wayland/X11 (Win 11 only) |
 
 To resize, create or edit `%UserProfile%\.wslconfig`:
 
@@ -270,7 +270,7 @@ wsl.exe --shutdown
 
 **WSL2 not available** -- Make sure virtualization is enabled in your BIOS/UEFI settings. Run `wsl.exe --install` from an admin PowerShell to enable WSL2.
 
-**No audio** -- Audio requires Windows 11 (WSLg). On Windows 11, run `wsl.exe -d pai -- pactl info` to check PulseAudio. If it fails, restart WSL with `wsl.exe --shutdown` and try again. Windows 10 does not support audio passthrough.
+**No audio** -- On **Windows 11**, audio uses WSLg automatically. Run `wsl.exe -d pai -- pactl info` to check PulseAudio. If it fails, restart WSL with `wsl.exe --shutdown` and try again. On **Windows 10**, audio falls back to PowerShell passthrough — the AI writes audio files to `C:\temp\pai-audio\` and plays them via Windows APIs. This works automatically with no setup required.
 
 **Web portal not loading** -- Make sure the distro is running (`wsl.exe -l -v` should show "Running"), then try http://localhost:8080.
 

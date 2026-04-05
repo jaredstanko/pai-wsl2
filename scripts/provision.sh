@@ -111,18 +111,57 @@ else
   log "yt-dlp installed via uv: $(yt-dlp --version 2>/dev/null || echo 'installed')"
 fi
 
-# ─── Install 'say' shim — routes through WSLg PulseAudio ───────────────────
+# ─── Audio helper: play a file through WSLg or PowerShell fallback ───────────
+# Shared function used by both 'say' and 'afplay' shims.
+# Fallback chain:
+#   1. WSLg PulseAudio (Windows 11) — ffplay via /mnt/wslg/PulseServer
+#   2. PowerShell passthrough (Windows 10) — write to NTFS, play via Windows APIs
 mkdir -p "$HOME/.local/bin"
+
+cat > "$HOME/.local/bin/pai-play-audio" <<'PLAYSHIM'
+#!/bin/bash
+# pai-play-audio — play an audio file through the best available path
+# Usage: pai-play-audio <file.wav|file.mp3>
+FILE="$1"
+[ -z "$FILE" ] || [ ! -f "$FILE" ] && exit 1
+
+# Try WSLg PulseAudio first (Windows 11)
+if [ -e /mnt/wslg/PulseServer ]; then
+  PULSE_SERVER=unix:/mnt/wslg/PulseServer ffplay -nodisp -autoexit -loglevel quiet "$FILE" 2>/dev/null
+  exit $?
+fi
+
+# Fallback: PowerShell passthrough (Windows 10)
+# Copy file to NTFS temp dir so Windows can read it natively (faster than \\wsl$\)
+AUDIO_DIR="/mnt/c/temp/pai-audio"
+mkdir -p "$AUDIO_DIR" 2>/dev/null
+BASENAME=$(basename "$FILE")
+cp "$FILE" "$AUDIO_DIR/$BASENAME" 2>/dev/null || exit 1
+WIN_PATH="C:\\temp\\pai-audio\\$BASENAME"
+
+case "${FILE##*.}" in
+  wav)
+    powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '$WIN_PATH').PlaySync()" 2>/dev/null
+    ;;
+  mp3|ogg|m4a|*)
+    # MediaPlayer handles MP3 and most formats
+    powershell.exe -NoProfile -Command "Add-Type -AssemblyName PresentationCore; \$p = New-Object System.Windows.Media.MediaPlayer; \$p.Open([Uri]'$WIN_PATH'); \$p.Play(); Start-Sleep -Milliseconds 500; while (\$p.Position -lt \$p.NaturalDuration.TimeSpan) { Start-Sleep -Milliseconds 200 }; \$p.Close()" 2>/dev/null
+    ;;
+esac
+
+# Clean up temp file
+rm -f "$AUDIO_DIR/$BASENAME" 2>/dev/null
+PLAYSHIM
+chmod +x "$HOME/.local/bin/pai-play-audio"
+log "pai-play-audio helper installed (WSLg -> PowerShell fallback)"
+
+# ─── Install 'say' shim ─────────────────────────────────────────────────────
 cat > "$HOME/.local/bin/say" <<'SAYSHIM'
 #!/bin/bash
 # say — Linux shim for macOS 'say' command
-# Fallback chain: Kokoro TTS -> espeak-ng -> silence
-# Audio routed through WSLg PulseAudio socket
+# Fallback chain: Kokoro TTS -> espeak-ng via pai-play-audio
 TEXT="$*"
 [ -z "$TEXT" ] && exit 0
-
-# WSLg PulseAudio socket
-export PULSE_SERVER=unix:/mnt/wslg/PulseServer
 
 # Try Kokoro TTS if running
 if curl -sf http://localhost:7880/health >/dev/null 2>&1; then
@@ -130,7 +169,7 @@ if curl -sf http://localhost:7880/health >/dev/null 2>&1; then
   if curl -s -X POST http://localhost:7880/tts \
     -H "Content-Type: application/json" \
     -d "{\"text\": \"$TEXT\"}" -o "$TMPFILE" 2>/dev/null && [ -s "$TMPFILE" ]; then
-    ffplay -nodisp -autoexit -loglevel quiet "$TMPFILE" 2>/dev/null
+    pai-play-audio "$TMPFILE"
     rm -f "$TMPFILE"
     exit 0
   fi
@@ -139,35 +178,39 @@ fi
 
 # Fall back to espeak-ng
 if command -v espeak-ng >/dev/null 2>&1; then
-  espeak-ng "$TEXT" 2>/dev/null
+  # espeak-ng: try WSLg first, then generate WAV and play via PowerShell
+  if [ -e /mnt/wslg/PulseServer ]; then
+    PULSE_SERVER=unix:/mnt/wslg/PulseServer espeak-ng "$TEXT" 2>/dev/null
+  else
+    TMPFILE=$(mktemp /tmp/say-XXXXXX.wav)
+    espeak-ng -w "$TMPFILE" "$TEXT" 2>/dev/null
+    pai-play-audio "$TMPFILE"
+    rm -f "$TMPFILE"
+  fi
   exit 0
 fi
 SAYSHIM
 chmod +x "$HOME/.local/bin/say"
-log "Linux 'say' shim installed (Kokoro -> espeak-ng, WSLg audio)"
+log "Linux 'say' shim installed (Kokoro -> espeak-ng, WSLg/PowerShell audio)"
 
-# Install 'afplay' shim — wraps ffplay with WSLg PulseAudio socket
+# ─── Install 'afplay' shim ──────────────────────────────────────────────────
 cat > "$HOME/.local/bin/afplay" <<'AFSHIM'
 #!/bin/bash
 # afplay — Linux shim for macOS afplay command
-# Routes audio through ffplay -> WSLg PulseAudio -> Windows audio
+# Routes audio through pai-play-audio (WSLg or PowerShell fallback)
 FILE=""
-VOLUME="1.0"
 while [ $# -gt 0 ]; do
   case "$1" in
-    -v) VOLUME="$2"; shift 2 ;;
+    -v) shift 2 ;;  # volume flag ignored in passthrough mode
     -*) shift ;;
     *) FILE="$1"; shift ;;
   esac
 done
 [ -z "$FILE" ] || [ ! -f "$FILE" ] && exit 1
-
-export PULSE_SERVER=unix:/mnt/wslg/PulseServer
-SDL_VOL=$(awk "BEGIN {printf \"%d\", $VOLUME * 100}")
-ffplay -nodisp -autoexit -volume "$SDL_VOL" -loglevel quiet "$FILE" 2>/dev/null
+pai-play-audio "$FILE"
 AFSHIM
 chmod +x "$HOME/.local/bin/afplay"
-log "Linux 'afplay' shim installed (ffplay + WSLg PulseAudio)"
+log "Linux 'afplay' shim installed (via pai-play-audio)"
 
 # ─── Step 2: Bun ───────────────────────────────────────────────────────────
 step "2/6" "Installing Bun..."
@@ -246,8 +289,10 @@ export PATH="$HOME/go/bin:$PATH"
 # Node global (npm install -g)
 export PATH="$HOME/.npm-global/bin:$PATH"
 
-# WSLg PulseAudio — audio routed through Windows audio subsystem
-export PULSE_SERVER=unix:/mnt/wslg/PulseServer
+# WSLg PulseAudio (Windows 11 only) — set only if socket exists
+if [ -e /mnt/wslg/PulseServer ]; then
+  export PULSE_SERVER=unix:/mnt/wslg/PulseServer
+fi
 
 # Default editor
 export EDITOR=nano

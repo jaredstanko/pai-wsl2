@@ -208,18 +208,17 @@ if ($wslStatus -match "Default Version:\s*2" -or $wslStatus -match "WSL 2") {
 
 # Check for WSLg — ships with Windows 11 only. Provides automatic PulseAudio
 # (audio passthrough) and Wayland/X11 (GUI apps like Playwright browsers).
-# Windows 10 does NOT have WSLg; audio requires manual PulseAudio setup or
-# is unavailable (graceful degradation to text).
+# Windows 10 does NOT have WSLg; audio falls back to PowerShell passthrough.
 $hasWSLg = $false
 if ($buildNumber -ge 22000) {
     $hasWSLg = $true
-    Write-Ok "WSLg available (Windows 11 — audio and GUI passthrough)"
+    Write-Ok "WSLg available (Windows 11 — native audio and GUI passthrough)"
 } else {
     Write-Host "        " -NoNewline
     Write-Host "[INFO] " -ForegroundColor Yellow -NoNewline
     Write-Host "WSLg not available (requires Windows 11)."
-    Write-Host "        Audio passthrough and GUI apps (Playwright) will not work automatically."
-    Write-Host "        AI text features work fully. Upgrade to Windows 11 for audio/GUI support."
+    Write-Host "        Audio will use PowerShell passthrough (writes to C:\temp\pai-audio\)."
+    Write-Host "        GUI apps (Playwright browser) will not display. All text features work fully."
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
