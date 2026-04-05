@@ -1,0 +1,15 @@
+# %UserProfile%\.wslconfig — Global WSL2 resource limits
+# Installed by install.ps1 Step 3 (only if not already present).
+# Edit this file on your Windows host and run: wsl --shutdown
+# to apply changes.
+
+[wsl2]
+memory=4GB
+swap=1GB
+processors=4
+localhostForwarding=true
+
+# Uncomment for mirrored networking (Windows 11 22H2+).
+# Mirrored mode shares the host IP stack — useful for VPNs and
+# localhost access from Windows without port forwarding.
+# networkingMode=mirrored

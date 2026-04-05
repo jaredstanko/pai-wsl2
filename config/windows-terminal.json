@@ -1,0 +1,12 @@
+{
+    "name": "PAI",
+    "commandline": "wsl.exe -d pai",
+    "startingDirectory": "//wsl$/pai/home/claude",
+    "icon": "ms-appx:///ProfileIcons/{9acb9455-ca41-5af7-950f-6bca1bc9722f}.png",
+    "colorScheme": "One Half Dark",
+    "fontFace": "Cascadia Code",
+    "fontSize": 11,
+    "cursorShape": "bar",
+    "padding": "8, 8, 8, 8",
+    "hidden": false
+}

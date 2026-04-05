@@ -1,242 +1,287 @@
 # pai-wsl2
 
-PAI + PAI Companion running on WSL2 (Ubuntu 24.04) with audio passthrough on Windows. No Docker.
+A sandboxed AI workspace running Claude Code on Windows. One script to install, PowerShell commands to control it.
 
-This is the Windows/WSL2 adaptation of [pai-lima](https://github.com/quinn-pai/pai-lima), which targets macOS with Lima VMs.
+## How It Works
 
-## What This Sets Up
+```mermaid
+graph TB
+    subgraph win [Your Windows PC]
+        terminal[Windows Terminal]
+        workspace["C:\pai-workspace\ Your files live here"]
+        browser[Browser]
+        explorer[Windows Explorer]
+    end
 
-- **WSL2** — Ubuntu 24.04 on Windows via the Windows Subsystem for Linux
-- **Audio** — WSLg passthrough (Windows 11) or PulseAudio TCP bridge (Windows 10)
-- **PAI v4.0** — [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure)
-- **PAI Companion** — [Web portal, file exchange, context enhancements](https://github.com/chriscantey/pai-companion) (portal served via Bun, not Docker)
-- **Shared folder** — `/home/claude` shared with the Windows host as `~/claude-workspace`
-- **Filesystem isolation** — Windows drives (`/mnt/c/`) disabled; Claude Code sandboxed to the VM
+    subgraph wsl [Sandbox WSL2 Distro - Ubuntu]
+        claude[Claude Code AI assistant]
+        pai[PAI Skills and tools]
+        portal[Web Portal localhost:8080]
+        voice[Voice Server]
+    end
 
-## Prerequisites
+    terminal -->|connects to| claude
+    pai -->|shared folders| workspace
+    explorer -->|browse files| workspace
+    browser -->|localhost:8080| portal
+    voice -->|WSLg audio passthrough| win
+```
 
-- Windows 10 version 2004+ (build 19041+) or Windows 11
-- WSL2 capable hardware (virtualization enabled in BIOS)
-- An Anthropic API key for Claude Code
+**The key idea:** Your AI runs in a sandbox (a mini Linux computer inside your Windows PC). Your files stay on your Windows machine in `C:\pai-workspace\`. The AI can read and write to those files, but it can't touch anything else on your PC.
+
+## What You Need
+
+- Windows 10 (build 19041 or later) or Windows 11
+- WSL2 enabled (the installer will enable it if needed)
+- An [Anthropic account](https://console.anthropic.com/) (free to create)
+- About 10 minutes for the first install
 
 ## Quick Start
 
+### Step 1: Install
+
+Open PowerShell as Administrator (right-click the Start button, choose "Terminal (Admin)" or "PowerShell (Admin)") and paste these three lines:
+
 ```powershell
-# 1. Clone this repo (in PowerShell)
-git clone https://github.com/quinn-pai/pai-wsl2.git
+git clone https://github.com/jaredstanko/pai-wsl2.git
 cd pai-wsl2
-
-# 2. Run the Windows setup (as Administrator)
-Set-ExecutionPolicy Bypass -Scope Process -Force
-.\setup-wsl.ps1
-
-# 3. Launch Ubuntu 24.04 from Start Menu
-#    (first launch: create user 'claude' when prompted)
-
-# 4. Inside WSL2, run the install script
-bash ~/install.sh
+powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-## Windows Setup (setup-wsl.ps1)
+The installer will download and set up everything automatically. You'll see a lot of output scrolling by -- **ignore it all** until you see the final instructions.
 
-The PowerShell script handles the Windows side:
+> **Note:** If WSL2 wasn't already enabled, the installer will enable it and ask you to restart your PC. After restarting, run `install.ps1` again and it will pick up where it left off.
 
-1. **Enables WSL2** — activates the WSL and Virtual Machine Platform features
-2. **Installs Ubuntu 24.04** — via `wsl --install -d Ubuntu-24.04`
-3. **Creates .wslconfig** — sets 4 CPUs, 4GB RAM, 2GB swap
-4. **Copies install.sh** — into the WSL2 home directory
-5. **Creates claude-workspace symlink** — `%USERPROFILE%\claude-workspace` → `\\wsl$\Ubuntu-24.04\home\claude`
+### Step 2: Open a PAI Session
 
-> **Note:** If the Virtual Machine Platform feature was just enabled, you must reboot and re-run the script.
+When the install finishes, open **Windows Terminal** and run:
 
-## Installing PAI + PAI Companion
-
-From inside WSL2 (Ubuntu 24.04):
-
-```bash
-bash ~/install.sh
+```powershell
+.\scripts\launch.ps1
 ```
 
-The script installs (in order):
+A new tab will open connected to your AI workspace.
 
-1. **Filesystem isolation** — disables Windows drive automount (`/mnt/c/`) via `/etc/wsl.conf`
-2. **System packages** — curl, git, zip, jq, tree, tmux, ffmpeg, imagemagick, wslu, etc.
-3. **Audio** — WSLg auto-detection or PulseAudio TCP bridge setup
-4. **Bun** — JavaScript runtime
-5. **Claude Code** — Anthropic's CLI, plus sandbox config blocking `/mnt/` at both permission and OS level
-6. **PAI v4.0** — clones the latest release and runs the installer in CLI mode
-7. **PAI Companion** — clones the companion repo, sets up portal/exchange/work directories, starts the portal web server on port 8080 using Bun (no Docker)
-8. **Playwright** — browser automation with Chromium
+### Step 3: Sign In
 
-### After installation
+Claude Code will ask you to sign in. It opens a browser -- log in with your Anthropic account.
 
-```bash
-# Authenticate Claude Code
-claude
+When it asks "Do you trust /home/claude/.claude?" say **yes**.
 
-# Activate PAI
-source ~/.bashrc
-pai
-```
+### Step 4: Set Up the Web Portal
 
-### Access the companion portal
-
-From your Windows browser, visit:
+Once you're signed in, paste this message into the terminal:
 
 ```
-http://localhost:8080
+Install PAI Companion following ~/pai-companion/companion/INSTALL.md.
+Skip Docker (use Bun directly for the portal) and skip the voice
+module. Keep ~/.vm-ip set to localhost and VM_IP=localhost in .env.
+After installation, verify the portal is running at localhost:8080
+and verify the voice server can successfully generate and play audio
+end-to-end (not just that the process is listening). Fix any
+macOS-specific binaries (like afplay) that won't work on Linux.
+Set both to start on boot.
 ```
 
-WSL2 automatically forwards ports to localhost on Windows.
+**Claude Code will ask you some questions. Each time press 2 (Yes) to allow it to edit settings for this session.**
 
-## Configuration
+Wait for it to finish. This takes a few minutes.
 
-### VM Resources (.wslconfig)
+### Step 5: You're Done
 
-The setup script creates `%USERPROFILE%\.wslconfig`:
+Open http://localhost:8080 in your browser to see the web portal. From now on, just run `.\scripts\launch.ps1` in PowerShell whenever you want to talk to your AI.
 
-| Setting | Value |
-|---------|-------|
+---
+
+## What You Get
+
+- **Sandboxed AI** -- Claude Code runs inside an isolated WSL2 distro, not directly on your Windows machine
+- **CLI-first control** -- start sessions, check health, upgrade, and manage everything from PowerShell
+- **Session resume** -- pick up previous conversations where you left off
+- **Web portal** -- a local website for viewing AI-created content and exchanging files
+- **Shared folders** -- `C:\pai-workspace\` on Windows is shared with the AI
+- **Audio** -- the AI can speak through your PC speakers (Windows 11 only, via WSLg)
+
+## Shared Files
+
+Your Windows PC and the AI share files through `C:\pai-workspace\`:
+
+```
+C:\pai-workspace\
+  exchange\    Drop files here -- the AI can read them
+  work\        AI outputs and projects
+  data\        Datasets and databases
+  portal\      Web portal content
+  upstream\    Reference repos
+```
+
+AI settings and memory live inside the WSL2 distro at `/home/claude/.claude` (on the fast ext4 filesystem). Your workspace files live on Windows. You can browse them in Explorer like any other folder.
+
+You can browse these folders in Windows Explorer just like any other folder on your PC.
+
+### Sharing Additional Folders
+
+The quickest way to get files into the distro is the `exchange\` folder -- just drop files there.
+
+To give the AI permanent access to a project folder on your Windows machine:
+
+```powershell
+.\scripts\mount.ps1 C:\Projects\my-repo
+```
+
+This adds the folder as a bind mount inside the distro. Your directory then appears at `/home/claude/my-repo` inside the distro with live two-way access.
+
+```powershell
+.\scripts\mount.ps1 -List                                          # See what's shared
+.\scripts\mount.ps1 C:\Projects\my-repo -MountAt /home/claude/code # Choose where it appears in the distro
+```
+
+### Copying Files
+
+To copy individual files in or out:
+
+```powershell
+# Copy a file from Windows into the distro
+wsl.exe -d pai cp /mnt/c/Users/You/Desktop/myfile.txt /home/claude/exchange/
+
+# Copy a file from the distro to Windows
+wsl.exe -d pai cp /home/claude/work/output.pdf /mnt/c/Users/You/Desktop/
+
+# Copy an entire folder (use -r)
+wsl.exe -d pai cp -r /home/claude/work/my-project /mnt/c/Users/You/Desktop/
+```
+
+Or just use the shared `C:\pai-workspace\` folder -- both sides can read and write to it.
+
+---
+
+## Advanced
+
+Everything below is for power users who want to customize or troubleshoot.
+
+### Install Options
+
+```powershell
+.\install.ps1                                  # Normal install
+.\install.ps1 -Verbose                         # Show detailed output
+.\install.ps1 -Name v2                         # Parallel install as a separate instance
+.\install.ps1 -Name v2 -Port 8082             # Parallel install with specific portal port
+```
+
+### Parallel Installs
+
+Use `-Name` to run multiple instances side by side. Each gets its own WSL2 distro, workspace, and portal port:
+
+```powershell
+.\install.ps1 -Name v2
+
+# Creates:
+#   Distro:    pai-v2
+#   Workspace: C:\pai-workspace-v2\
+#   Portal:    http://localhost:8081 (auto-assigned)
+```
+
+All scripts accept `-Name` to target a specific instance:
+
+```powershell
+.\scripts\launch.ps1 -Name v2
+.\scripts\verify.ps1 -Name v2
+.\scripts\upgrade.ps1 -Name v2
+.\scripts\uninstall.ps1 -Name v2
+```
+
+### CLI Commands
+
+```powershell
+.\scripts\launch.ps1                 # New PAI session
+.\scripts\launch.ps1 -Resume         # Resume a previous session
+.\scripts\launch.ps1 -Shell          # Plain shell in the distro (no AI)
+```
+
+### Health Check
+
+```powershell
+.\scripts\doctor.ps1                 # Full diagnostic -- checks WSL2, distro, network,
+                                     # disk, services, and reports PASS/WARN/FAIL
+```
+
+### Verification
+
+```powershell
+.\scripts\verify.ps1                 # Check system health (PASS/FAIL for each component)
+```
+
+### Upgrading
+
+```powershell
+cd pai-wsl2
+git pull
+.\scripts\upgrade.ps1
+```
+
+Your workspace, authentication, and sessions are preserved.
+
+### Backup & Restore
+
+```powershell
+.\scripts\backup-restore.ps1 -Backup           # Back up distro + workspace
+.\scripts\backup-restore.ps1 -Restore           # Restore from a backup
+```
+
+### Uninstall
+
+```powershell
+.\scripts\uninstall.ps1
+```
+
+Removes the WSL2 distro and launch scripts. Asks before deleting workspace data.
+
+### WSL2 Distro Specs
+
+| Setting | Default |
+|---------|---------|
+| Runtime | WSL2 (Hyper-V backed) |
+| OS | Ubuntu 24.04 x86_64 |
+| CPUs | 4 |
 | Memory | 4 GB |
-| Processors | 4 |
-| Swap | 2 GB |
-| Auto memory reclaim | gradual |
-| Sparse VHD | true |
+| Disk | 50 GB (virtual hard disk) |
+| Audio | WSLg PulseAudio passthrough |
+| Display | WSLg Wayland/X11 passthrough |
 
-Edit this file and restart WSL (`wsl --shutdown`) to change settings.
-
-### Enabling systemd
-
-Ubuntu 24.04 on WSL2 has systemd enabled by default. If it's not working, add to `/etc/wsl.conf`:
+To resize, create or edit `%UserProfile%\.wslconfig`:
 
 ```ini
-[boot]
-systemd=true
+[wsl2]
+processors=6
+memory=6GB
+swap=8GB
 ```
 
-Then restart WSL:
+Then restart the distro:
 
 ```powershell
-wsl --shutdown
+wsl.exe --shutdown
+.\scripts\launch.ps1
 ```
 
-Without systemd, start the portal manually:
+### Troubleshooting
 
-```bash
-pai-portal-start   # alias added by install.sh
-```
+**Install fails at "Importing distro"** -- Run `wsl.exe --unregister pai` then `.\install.ps1` again.
 
-## Audio
+**WSL2 not available** -- Make sure virtualization is enabled in your BIOS/UEFI settings. Run `wsl.exe --install` from an admin PowerShell to enable WSL2.
 
-### Windows 11 (WSLg)
+**No audio** -- Audio requires Windows 11 (WSLg). On Windows 11, run `wsl.exe -d pai -- pactl info` to check PulseAudio. If it fails, restart WSL with `wsl.exe --shutdown` and try again. Windows 10 does not support audio passthrough.
 
-Audio works automatically via WSLg. No configuration needed.
+**Web portal not loading** -- Make sure the distro is running (`wsl.exe -l -v` should show "Running"), then try http://localhost:8080.
 
-```bash
-# Verify audio
-aplay -l
-speaker-test -t sine -f 440 -l 1 -p 2
-```
+**Distro shows as "Stopped"** -- Run `wsl.exe -d pai` to start it, or `.\scripts\launch.ps1`.
 
-### Windows 10 (PulseAudio TCP Bridge)
-
-Windows 10 lacks WSLg. The install script configures PulseAudio to connect to the Windows host, but you need a PulseAudio server on Windows:
-
-1. Download [PulseAudio for Windows](https://www.freedesktop.org/wiki/Software/PulseAudio/Ports/Windows/Support/)
-2. Edit `etc/pulse/default.pa` and add:
-   ```
-   load-module module-native-protocol-tcp auth-anonymous=1
-   ```
-3. Run `bin/pulseaudio.exe`
-4. Inside WSL2, test with `speaker-test`
-
-## WSL2 Management
-
-```powershell
-# Stop WSL2
-wsl --shutdown
-
-# Restart a specific distro
-wsl -t Ubuntu-24.04
-wsl -d Ubuntu-24.04
-
-# List installed distros
-wsl -l -v
-
-# Set Ubuntu 24.04 as default
-wsl --set-default Ubuntu-24.04
-
-# Export/backup the distro
-wsl --export Ubuntu-24.04 pai-backup.tar
-
-# Import from backup
-wsl --import Ubuntu-24.04-restored C:\WSL\restored pai-backup.tar
-```
-
-## Directory Layout (inside WSL2)
-
-```
-~/                   Home directory (/home/claude), shared with host as claude-workspace
-~/portal/            Companion web portal (served on :8080)
-~/exchange/          File exchange directory
-~/work/              Project workspace (git tracked)
-~/data/              Data storage
-~/upstream/          Reference repos (PAI, TheAlgorithm)
-~/.claude/           PAI configuration and skills
-```
-
-## Filesystem Isolation
-
-By default, WSL2 mounts the Windows C: drive at `/mnt/c/`, which would give Claude Code read/write access to your entire Windows filesystem. This project disables that with two layers of defense:
-
-**Layer 1: Disable automount** (`/etc/wsl.conf` inside WSL2)
-```ini
-[automount]
-enabled=false
-```
-Windows drives are never mounted. File transfer between Windows and WSL2 uses the `claude-workspace` symlink (via `\\wsl$\`) instead.
-
-**Layer 2: Claude Code sandbox** (`~/.claude/settings.json`)
-- **Permissions**: `Read(//mnt/**)` and `Edit(//mnt/**)` denied — Claude's tools refuse to touch `/mnt/`
-- **OS sandbox**: `denyRead` and `denyWrite` on `/mnt/` — Bash subprocesses blocked at the OS level (Linux bubblewrap)
-- **Write scope**: limited to `~` (home directory) and `/tmp`
-
-**Limitations**: Both layers live inside the VM. An agent with root shell access could theoretically modify `/etc/wsl.conf` or `~/.claude/settings.json`. These are defense-in-depth measures that prevent accidental access, not a hard security boundary against a compromised agent.
-
-## Differences from pai-lima (macOS)
-
-| Feature | pai-lima (macOS) | pai-wsl2 (Windows) |
-|---------|-----------------|-------------------|
-| VM layer | Lima + VZ framework | WSL2 + Hyper-V |
-| Architecture | ARM64 (Apple Silicon) | x86_64 (typically) |
-| Audio | VirtIO sound device | WSLg (Win 11) or PulseAudio TCP (Win 10) |
-| Shared folder | Lima mount (`~/claude-workspace`) | `/home/claude` via symlink (`~/claude-workspace` on host) |
-| Port forwarding | Manual (VM IP) | Automatic (localhost) |
-| VM config | `pai.yaml` | `.wslconfig` |
-| Setup script | `brew install lima` | `setup-wsl.ps1` (PowerShell) |
-
-## Troubleshooting
-
-**WSL2 won't install:** Ensure virtualization is enabled in your BIOS/UEFI settings. Check with `systeminfo` in cmd — "Hyper-V Requirements" should all say "Yes".
-
-**"Please enable the Virtual Machine Platform" error:** Run `setup-wsl.ps1` as Administrator and reboot when prompted.
-
-**No audio (Windows 11):** Make sure WSLg is working: `ls /mnt/wslg/`. If missing, update WSL: `wsl --update`.
-
-**No audio (Windows 10):** You need PulseAudio running on Windows with TCP module loaded. See the Audio section above.
-
-**Portal not accessible:** Check if the service is running: `systemctl --user status pai-portal`. If systemd isn't enabled, use `pai-portal-start`.
-
-**DNS resolution fails:** Add to `/etc/wsl.conf`:
-```ini
-[network]
-generateResolvConf=false
-```
-Then `echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf`.
+**Slow file access in shared folders** -- This is normal for cross-OS file access in WSL2. For best performance on large projects, clone repos inside the distro (`/home/claude/`) rather than in `/mnt/c/`.
 
 ## Credits
 
-- [WSL2](https://learn.microsoft.com/en-us/windows/wsl/) — Windows Subsystem for Linux
-- [PAI](https://github.com/danielmiessler/Personal_AI_Infrastructure) — Personal AI Infrastructure by Daniel Miessler
-- [PAI Companion](https://github.com/chriscantey/pai-companion) — Companion package by Chris Cantey
-- [pai-lima](https://github.com/quinn-pai/pai-lima) — Original macOS version
+- [WSL2](https://learn.microsoft.com/en-us/windows/wsl/) -- Windows Subsystem for Linux
+- [WSLg](https://github.com/microsoft/wslg) -- GUI and audio support for WSL
+- [PAI](https://github.com/danielmiessler/Personal_AI_Infrastructure) -- Personal AI Infrastructure by Daniel Miessler
+- [PAI Companion](https://github.com/chriscantey/pai-companion) -- Companion package by Chris Cantey
+- [Windows Terminal](https://github.com/microsoft/terminal) -- Modern terminal for Windows
