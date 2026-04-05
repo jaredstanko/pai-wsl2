@@ -386,7 +386,7 @@ wsl.exe -d $DistroName -- echo "restarted" 2>&1 | Out-Null
 Write-Ok "Distro restarted with new configuration"
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Step 6: Create workspace directories on Windows side
+# Step 6: Create workspace directories and fstab mounts
 # ═════════════════════════════════════════════════════════════════════════════
 
 Write-Step "Creating workspace directories..."
@@ -394,6 +394,7 @@ Write-Step "Creating workspace directories..."
 # Hybrid filesystem layout:
 # - claude-home lives on ext4 inside WSL2 (/home/claude) for performance
 # - User-facing dirs live on NTFS for Windows Explorer access
+# - Automount is DISABLED (sandbox isolation) — only these dirs are mounted via fstab
 $ntfsDirs = @("data", "exchange", "portal", "work", "upstream")
 
 if (-not (Test-Path $WorkspaceDir)) {
@@ -408,17 +409,67 @@ foreach ($dir in $ntfsDirs) {
 }
 Write-Ok "$WorkspaceDir\ with $($ntfsDirs.Count) subdirectories"
 
-# Create symlinks inside WSL2 pointing to the NTFS directories.
-# The NTFS workspace is auto-mounted at /mnt/c/pai-workspace by WSL2.
-$wslWorkspace = "/mnt/c/pai-workspace"
-if ($Name -ne "") {
-    $wslWorkspace = "/mnt/c/pai-workspace-$Name"
+# Write /etc/fstab to selectively mount workspace dirs (not the full C:\ drive).
+# This is the sandbox boundary — the AI can only see these specific directories.
+$fstabLines = @("# PAI workspace mounts — managed by install.ps1")
+$winDrive = $WorkspaceDir.Substring(0, 1)  # "C" from "C:\pai-workspace"
+foreach ($dir in $ntfsDirs) {
+    $winPath = "$WorkspaceDir\$dir"
+    $linuxPath = "/home/claude/$dir"
+    $fstabLines += "${winPath} ${linuxPath} drvfs defaults,metadata,uid=1000,gid=1000 0 0"
+}
+$fstabContent = $fstabLines -join "`n"
+Invoke-WslCommand "mkdir -p /home/claude/data /home/claude/exchange /home/claude/portal /home/claude/work /home/claude/upstream"
+Invoke-WslCommand "cat > /etc/fstab << 'FSTAB_EOF'
+$fstabContent
+FSTAB_EOF"
+Write-Ok "fstab configured — workspace dirs mounted selectively (no full C:\ access)"
+
+# --- Windows 10 audio opt-in ---
+# WSLg (Windows 11) handles audio natively. On Windows 10, audio requires
+# enabling interop so the AI can call powershell.exe to play sound files.
+# This is a sandbox trade-off: interop lets the AI run Windows commands.
+if (-not $hasWSLg) {
+    Write-Host ""
+    Write-Host "        ┌──────────────────────────────────────────────────┐" -ForegroundColor Yellow
+    Write-Host "        │  AUDIO ON WINDOWS 10                            │" -ForegroundColor Yellow
+    Write-Host "        │                                                  │" -ForegroundColor Yellow
+    Write-Host "        │  Your Windows version doesn't have WSLg, so     │" -ForegroundColor Yellow
+    Write-Host "        │  audio can't pass through automatically.        │" -ForegroundColor Yellow
+    Write-Host "        │                                                  │" -ForegroundColor Yellow
+    Write-Host "        │  To enable audio, PAI needs permission to run   │" -ForegroundColor Yellow
+    Write-Host "        │  PowerShell from inside the sandbox to play     │" -ForegroundColor Yellow
+    Write-Host "        │  sound files. This reduces sandbox isolation.   │" -ForegroundColor Yellow
+    Write-Host "        │                                                  │" -ForegroundColor Yellow
+    Write-Host "        │  Without audio, everything else works fine —    │" -ForegroundColor Yellow
+    Write-Host "        │  text, code, web portal, all of it.            │" -ForegroundColor Yellow
+    Write-Host "        └──────────────────────────────────────────────────┘" -ForegroundColor Yellow
+    Write-Host ""
+    $audioChoice = Read-Host "        Enable audio? (reduces sandbox isolation) [y/N]"
+    if ($audioChoice -match '^[Yy]') {
+        # Enable interop only — still no automount of full C:\
+        Invoke-WslCommand "sed -i 's/enabled = false/enabled = true/' /etc/wsl.conf"
+        Invoke-WslCommand "sed -i 's/appendWindowsPath = false/appendWindowsPath = true/' /etc/wsl.conf"
+        # Mount a temp audio directory for PowerShell playback
+        $audioDir = "C:\temp\pai-audio"
+        if (-not (Test-Path $audioDir)) {
+            New-Item -ItemType Directory -Path $audioDir -Force | Out-Null
+        }
+        Invoke-WslCommand "mkdir -p /mnt/pai-audio"
+        Invoke-WslCommand "echo '${audioDir} /mnt/pai-audio drvfs defaults 0 0' >> /etc/fstab"
+        Write-Ok "Audio enabled — interop on, audio temp dir mounted at /mnt/pai-audio"
+    } else {
+        Write-Ok "Audio disabled — full sandbox isolation preserved"
+    }
+    Write-Host ""
 }
 
-foreach ($dir in $ntfsDirs) {
-    Invoke-WslAsUser "if [ ! -L ~/`$dir ] && [ ! -d ~/`$dir ]; then ln -s $wslWorkspace/$dir ~/$dir; fi"
-}
-Write-Ok "Symlinks created in /home/claude -> $wslWorkspace/*"
+# Terminate and restart to apply fstab mounts
+Write-Host "        Restarting distro to apply mounts..."
+wsl.exe --terminate $DistroName 2>&1 | Out-Null
+Start-Sleep -Seconds 2
+wsl.exe -d $DistroName -- echo "restarted" 2>&1 | Out-Null
+Write-Ok "Distro restarted with selective mounts"
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Step 7: Run provision.sh inside WSL2

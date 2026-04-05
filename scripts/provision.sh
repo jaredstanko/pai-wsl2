@@ -51,8 +51,7 @@ retry() {
 PAI_REPO="https://github.com/danielmiessler/PAI.git"
 PAI_COMPANION_REPO="https://github.com/chriscantey/pai-companion.git"
 
-# Workspace root on the NTFS side (mounted via /mnt/c/)
-NTFS_WORKSPACE="${NTFS_WORKSPACE:-/mnt/c/pai-workspace}"
+# Workspace dirs are mounted at /home/claude/{data,exchange,...} via fstab
 
 echo -e "${BOLD}"
 echo "============================================"
@@ -131,10 +130,17 @@ if [ -e /mnt/wslg/PulseServer ]; then
   exit $?
 fi
 
-# Fallback: PowerShell passthrough (Windows 10)
-# Copy file to NTFS temp dir so Windows can read it natively (faster than \\wsl$\)
-AUDIO_DIR="/mnt/c/temp/pai-audio"
-mkdir -p "$AUDIO_DIR" 2>/dev/null
+# Fallback: PowerShell passthrough (Windows 10, requires interop opt-in)
+# If interop is disabled (user chose full sandbox), audio silently fails.
+if ! command -v powershell.exe >/dev/null 2>&1; then
+  exit 1  # interop disabled — no audio available, fail silently
+fi
+
+AUDIO_DIR="/mnt/pai-audio"
+if [ ! -d "$AUDIO_DIR" ]; then
+  exit 1  # audio mount not configured — user declined audio during install
+fi
+
 BASENAME=$(basename "$FILE")
 cp "$FILE" "$AUDIO_DIR/$BASENAME" 2>/dev/null || exit 1
 WIN_PATH="C:\\temp\\pai-audio\\$BASENAME"
@@ -405,31 +411,18 @@ else
   warn "$HOME/.claude mount not writable — skipping .env write"
 fi
 
-# ─── Step 4c: Create symlinks to NTFS workspace ───────────────────────────
-step "4c" "Creating workspace symlinks to NTFS..."
+# ─── Step 4c: Verify workspace mounts ────────────────────────────────────
+step "4c" "Checking workspace mounts..."
 
-# User-facing directories live on NTFS (accessible from Windows Explorer)
-# claude-home stays on ext4 for performance (it's the .claude directory)
+# Workspace directories are mounted via /etc/fstab (configured by install.ps1).
+# Automount of C:\ is disabled for sandbox isolation — only these dirs are shared.
 USER_DIRS="data exchange portal work upstream"
 
 for dir in $USER_DIRS; do
-  TARGET="${NTFS_WORKSPACE}/${dir}"
-  LINK="$HOME/${dir}"
-
-  if [ -L "$LINK" ]; then
-    log "Symlink already exists: ~/$dir -> $(readlink "$LINK")"
-  elif [ -d "$LINK" ]; then
-    warn "~/$dir is a real directory — skipping (move contents to $TARGET manually)"
+  if [ -d "$HOME/$dir" ]; then
+    log "~/$dir mounted"
   else
-    if [ -d "$TARGET" ]; then
-      ln -sf "$TARGET" "$LINK"
-      log "Symlinked ~/$dir -> $TARGET"
-    else
-      warn "NTFS target not found: $TARGET (will be created by install.ps1)"
-      # Create the symlink anyway — it will resolve once install.ps1 creates the dir
-      ln -sf "$TARGET" "$LINK"
-      log "Symlinked ~/$dir -> $TARGET (pending creation)"
-    fi
+    warn "~/$dir not mounted — fstab may need a distro restart"
   fi
 done
 
