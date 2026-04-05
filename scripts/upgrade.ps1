@@ -7,7 +7,7 @@
 #   - System packages (apt-get upgrade)
 #
 # What this does NOT touch:
-#   - Your data in C:\pai-workspace\
+#   - Your data in %USERPROFILE%\pai-workspace\
 #   - Your Claude Code authentication and sessions
 #   - Your PAI configuration (~/.claude/ inside the distro)
 #   - Your work\ directory

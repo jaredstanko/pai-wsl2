@@ -4,7 +4,7 @@
 # Parses -Name and -Port parameters and sets:
 #   $DistroName    "pai" (default) or "pai-X"
 #   $InstanceSuffix "" (default) or "-X"
-#   $Workspace     "C:\pai-workspace" (default) or "C:\pai-workspace-X"
+#   $Workspace     "$env:USERPROFILE\pai-workspace" (default) or "...\pai-workspace-X"
 #   $PortalPort    8080 (default) or specified/auto-assigned port
 #   $LogFile       "$env:USERPROFILE\.pai-install.log" or per-instance variant
 #
@@ -30,7 +30,7 @@ if (-not (Get-Variable -Name 'Port' -Scope 'Script' -ErrorAction SilentlyContinu
 if ($Name -and $Name -ne '') {
     $script:DistroName     = "pai-$Name"
     $script:InstanceSuffix = "-$Name"
-    $script:Workspace      = "C:\pai-workspace-$Name"
+    $script:Workspace      = "$env:USERPROFILE\pai-workspace-$Name"
     $script:LogFile        = "$env:USERPROFILE\.pai-install-$Name.log"
 
     # Port: use specified, or default to 8081 (auto-scan only at install time)
@@ -44,7 +44,7 @@ if ($Name -and $Name -ne '') {
 else {
     $script:DistroName     = 'pai'
     $script:InstanceSuffix = ''
-    $script:Workspace      = 'C:\pai-workspace'
+    $script:Workspace      = "$env:USERPROFILE\pai-workspace"
     $script:LogFile        = "$env:USERPROFILE\.pai-install.log"
 
     if ($Port -gt 0) {

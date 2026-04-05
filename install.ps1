@@ -12,8 +12,8 @@
 
 .PARAMETER Name
     Instance suffix for parallel installs. Default creates distro "pai" with
-    workspace at C:\pai-workspace. With -Name "v2", creates "pai-v2" with
-    workspace at C:\pai-workspace-v2.
+    workspace at %USERPROFILE%\pai-workspace. With -Name "v2", creates "pai-v2" with
+    workspace at %USERPROFILE%\pai-workspace-v2.
 
 .PARAMETER Port
     Portal port number. Defaults to 8080.
@@ -44,11 +44,11 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 if ($Name -ne "") {
     $DistroName   = "pai-$Name"
-    $WorkspaceDir = "C:\pai-workspace-$Name"
+    $WorkspaceDir = "$env:USERPROFILE\pai-workspace-$Name"
     $InstanceLabel = "PAI ($Name)"
 } else {
     $DistroName   = "pai"
-    $WorkspaceDir = "C:\pai-workspace"
+    $WorkspaceDir = "$env:USERPROFILE\pai-workspace"
     $InstanceLabel = "PAI"
 }
 
@@ -486,14 +486,28 @@ foreach ($dir in $ntfsDirs) {
 }
 Write-Ok "$WorkspaceDir\ with $($ntfsDirs.Count) subdirectories"
 
+# Set PAI_WORKSPACE environment variable for the current user (persists across sessions)
+[Environment]::SetEnvironmentVariable('PAI_WORKSPACE', $WorkspaceDir, 'User')
+$env:PAI_WORKSPACE = $WorkspaceDir
+Write-Ok "PAI_WORKSPACE environment variable set to $WorkspaceDir"
+
+# Warn if workspace path contains spaces (common with USERPROFILE paths)
+if ($WorkspaceDir -match ' ') {
+    Write-Host "        " -NoNewline
+    Write-Host "[NOTE] " -ForegroundColor Cyan -NoNewline
+    Write-Host "Workspace path contains spaces. All scripts handle this correctly,"
+    Write-Host "        but if you use custom scripts, ensure paths are quoted."
+}
+
 # Write /etc/fstab to selectively mount workspace dirs (not the full C:\ drive).
 # This is the sandbox boundary — the AI can only see these specific directories.
 $fstabLines = @("# PAI workspace mounts — managed by install.ps1")
-$winDrive = $WorkspaceDir.Substring(0, 1)  # "C" from "C:\pai-workspace"
 foreach ($dir in $ntfsDirs) {
     $winPath = "$WorkspaceDir\$dir"
+    # fstab uses space as delimiter — encode literal spaces as \040
+    $fstabWinPath = $winPath -replace ' ', '\040'
     $linuxPath = "/home/claude/$dir"
-    $fstabLines += "${winPath} ${linuxPath} drvfs defaults,metadata,uid=1000,gid=1000 0 0"
+    $fstabLines += "${fstabWinPath} ${linuxPath} drvfs defaults,metadata,uid=1000,gid=1000 0 0"
 }
 $fstabContent = $fstabLines -join "`n"
 Invoke-WslCommand "mkdir -p /home/claude/data /home/claude/exchange /home/claude/portal /home/claude/work /home/claude/upstream"
@@ -647,12 +661,25 @@ if (-not (Test-Path $shortcutPath)) {
     Write-Skip "Desktop shortcut"
 }
 
-# --- Portal URL shortcut on Desktop ---
-$portalUrlSrc = Join-Path $ScriptDir "config\portal.url"
-$portalUrlDst = Join-Path $desktopPath "PAI Portal.url"
-if ((Test-Path $portalUrlSrc) -and -not (Test-Path $portalUrlDst)) {
-    Copy-Item $portalUrlSrc $portalUrlDst
-    Write-Ok "Portal shortcut added to Desktop"
+# --- Workspace folder shortcut on Desktop ---
+if ($Name -ne "") { $wsShortcutName = "PAI Workspace ($Name)" } else { $wsShortcutName = "PAI Workspace" }
+$workspaceShortcutPath = Join-Path $desktopPath "$wsShortcutName.lnk"
+if (-not (Test-Path $workspaceShortcutPath)) {
+    try {
+        $wsShell = New-Object -ComObject WScript.Shell
+        $wsShortcut = $wsShell.CreateShortcut($workspaceShortcutPath)
+        $wsShortcut.TargetPath = $WorkspaceDir
+        $wsShortcut.Description = "Open $InstanceLabel workspace folder"
+        $wsShortcut.Save()
+        Write-Ok "Workspace folder shortcut added to Desktop"
+    }
+    catch {
+        Write-Host "        " -NoNewline
+        Write-Host "[WARN] " -ForegroundColor Yellow -NoNewline
+        Write-Host "Could not create workspace shortcut: $_"
+    }
+} else {
+    Write-Skip "Workspace folder shortcut"
 }
 
 # --- Windows Terminal profile advisory ---
@@ -740,6 +767,10 @@ Write-Host ""
 Write-Host "  1. Launch the sandbox:" -ForegroundColor White
 Write-Host "     wsl -d $DistroName" -ForegroundColor Cyan
 Write-Host "     (or double-click the '$InstanceLabel' shortcut on your Desktop)"
+Write-Host ""
+Write-Host "  Your workspace folder:" -ForegroundColor White
+Write-Host "     $WorkspaceDir" -ForegroundColor Cyan
+Write-Host "     (shortcut on your Desktop: 'PAI Workspace')"
 Write-Host ""
 Write-Host "  2. Inside the sandbox, start Claude Code:" -ForegroundColor White
 Write-Host "     claude" -ForegroundColor Cyan

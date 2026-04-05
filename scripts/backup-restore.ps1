@@ -3,7 +3,7 @@
 #
 # Backup includes:
 #   - WSL2 distro exported as .tar file (wsl --export)
-#   - Workspace directory (C:\pai-workspace\) copied alongside
+#   - Workspace directory (%USERPROFILE%\pai-workspace\) copied alongside
 #
 # Usage:
 #   .\scripts\backup-restore.ps1 backup                  # Backup default instance

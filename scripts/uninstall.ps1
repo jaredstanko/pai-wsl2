@@ -4,7 +4,7 @@
 # What this removes:
 #   - WSL2 distro (wsl --unregister)
 #   - Desktop/Start Menu shortcuts (if any)
-#   - Optionally: workspace data at C:\pai-workspace\
+#   - Optionally: workspace data at %USERPROFILE%\pai-workspace\
 #
 # What this does NOT remove:
 #   - WSL2 itself
@@ -80,11 +80,20 @@ if ($Name -and $Name -ne '') {
     $shortcutName = "PAI"
 }
 
-# Desktop shortcut
+# Desktop shortcut (PAI session launcher)
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$shortcutName.lnk"
 if (Test-Path $desktopShortcut) {
     Remove-Item $desktopShortcut -Force
     Ok "Removed desktop shortcut"
+    $removedItems++
+}
+
+# Desktop workspace folder shortcut
+if ($Name -and $Name -ne '') { $wsShortcutName = "PAI Workspace ($Name)" } else { $wsShortcutName = "PAI Workspace" }
+$workspaceShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$wsShortcutName.lnk"
+if (Test-Path $workspaceShortcut) {
+    Remove-Item $workspaceShortcut -Force
+    Ok "Removed workspace folder shortcut"
     $removedItems++
 }
 
@@ -93,6 +102,13 @@ $startMenuShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) "$shor
 if (Test-Path $startMenuShortcut) {
     Remove-Item $startMenuShortcut -Force
     Ok "Removed Start Menu shortcut"
+    $removedItems++
+}
+
+# PAI_WORKSPACE environment variable
+if ([Environment]::GetEnvironmentVariable('PAI_WORKSPACE', 'User')) {
+    [Environment]::SetEnvironmentVariable('PAI_WORKSPACE', $null, 'User')
+    Ok "Removed PAI_WORKSPACE environment variable"
     $removedItems++
 }
 

@@ -125,8 +125,9 @@ Write-Host ""
 # Create mount point inside distro
 wsl.exe -d $DistroName -u root -- bash -c "mkdir -p '$WslMountPath'" 2>$null
 
-# Add fstab entry
-$fstabLine = "$resolvedPath $WslMountPath drvfs defaults,metadata,uid=1000,gid=1000 0 0"
+# Add fstab entry (encode spaces as \040 since fstab uses space as field delimiter)
+$fstabResolvedPath = $resolvedPath -replace ' ', '\040'
+$fstabLine = "$fstabResolvedPath $WslMountPath drvfs defaults,metadata,uid=1000,gid=1000 0 0"
 wsl.exe -d $DistroName -u root -- bash -c "echo '$fstabLine' >> /etc/fstab"
 
 if ($LASTEXITCODE -ne 0) {

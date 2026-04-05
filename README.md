@@ -8,7 +8,7 @@ A sandboxed AI workspace running Claude Code on Windows. One script to install, 
 graph TB
     subgraph win [Your Windows PC]
         terminal[Windows Terminal]
-        workspace["C:\pai-workspace\ Your files live here"]
+        workspace["%USERPROFILE%\pai-workspace\ Your files live here"]
         browser[Browser]
         explorer[Windows Explorer]
     end
@@ -27,7 +27,7 @@ graph TB
     voice -->|audio passthrough| win
 ```
 
-**The key idea:** Your AI runs in a sandbox (a mini Linux computer inside your Windows PC). Your files stay on your Windows machine in `C:\pai-workspace\`. The AI can read and write to those files, but it can't touch anything else on your PC.
+**The key idea:** Your AI runs in a sandbox (a mini Linux computer inside your Windows PC). Your files stay on your Windows machine in your user profile at `%USERPROFILE%\pai-workspace\` (e.g., `C:\Users\YourName\pai-workspace\`). The AI can read and write to those files, but it can't touch anything else on your PC.
 
 ## What You Need
 
@@ -99,7 +99,7 @@ Open http://localhost:8080 in your browser to see the web portal. Look for the P
 - **System tray app** -- start sessions, stop the distro, open the web portal from one icon
 - **Session resume** -- pick up previous conversations where you left off
 - **Web portal** -- a local website for viewing AI-created content and exchanging files
-- **Shared folders** -- `C:\pai-workspace\` on Windows is shared with the AI
+- **Shared folders** -- `%USERPROFILE%\pai-workspace\` on Windows is shared with the AI
 - **Health check** -- run `doctor.ps1` or use the tray menu to check system health
 - **Audio** -- the AI can speak through your PC speakers (Windows 11 via WSLg, Windows 10 optional)
 
@@ -127,10 +127,10 @@ The tray app is compiled from C# source at install time using the .NET Framework
 
 ## Shared Files
 
-Your Windows PC and the AI share files through `C:\pai-workspace\`:
+Your Windows PC and the AI share files through `%USERPROFILE%\pai-workspace\`:
 
 ```
-C:\pai-workspace\
+%USERPROFILE%\pai-workspace\
   exchange\    Drop files here -- the AI can read them
   work\        AI outputs and projects
   data\        Datasets and databases
@@ -159,7 +159,7 @@ This adds the folder to the distro's mount table and restarts the distro briefly
 
 ### Copying Files
 
-To copy individual files in or out, just use the shared `C:\pai-workspace\` folder. Drop files into `C:\pai-workspace\exchange\` on Windows and they appear at `/home/claude/exchange/` inside the distro (and vice versa).
+To copy individual files in or out, just use the shared `pai-workspace` folder. Drop files into `%USERPROFILE%\pai-workspace\exchange\` on Windows and they appear at `/home/claude/exchange/` inside the distro (and vice versa). There's a "PAI Workspace" shortcut on your Desktop for quick access.
 
 You can also copy from the Windows side using the `\\wsl$\` path:
 
@@ -192,7 +192,7 @@ Use `-Name` to run multiple instances side by side. Each gets its own WSL2 distr
 
 # Creates:
 #   Distro:    pai-v2
-#   Workspace: C:\pai-workspace-v2\
+#   Workspace: %USERPROFILE%\pai-workspace-v2\
 #   Portal:    http://localhost:8081 (auto-assigned)
 ```
 
