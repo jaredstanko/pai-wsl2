@@ -277,45 +277,8 @@ class PAIStatus
             return;
         }
 
-        // Query tmux sessions inside the distro
-        string output = RunCommand("wsl.exe", "-d " + DistroName + " -- tmux list-sessions -F #{session_name} 2>/dev/null", 5000);
-
-        if (string.IsNullOrEmpty(output))
-        {
-            var resumeClaudeItem = new ToolStripMenuItem("Resume Session...", null, (s, e) => ResumeSession());
-            resumeItem.DropDownItems.Add(resumeClaudeItem);
-            return;
-        }
-
-        // Add "Resume Session" at the top (uses claude -r picker)
-        var pickerItem = new ToolStripMenuItem("Resume Session...", null, (s, e) => ResumeSession());
-        pickerItem.Font = new Font(pickerItem.Font, FontStyle.Bold);
-        resumeItem.DropDownItems.Add(pickerItem);
-        resumeItem.DropDownItems.Add(new ToolStripSeparator());
-
-        // List individual tmux sessions
-        foreach (string line in output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
-        {
-            string sessionName = line.Trim();
-            if (string.IsNullOrEmpty(sessionName)) continue;
-            string name = sessionName; // capture for closure
-            var sessionItem = new ToolStripMenuItem(name, null, (s, e) => AttachSession(name));
-            resumeItem.DropDownItems.Add(sessionItem);
-        }
-    }
-
-    static void AttachSession(string sessionName)
-    {
-        string cmd = "tmux attach-session -t " + sessionName;
-        if (HasWindowsTerminal())
-        {
-            Process.Start("wt.exe", "-w 0 new-tab --title \"" + sessionName + "\" -- wsl.exe -d " + DistroName +
-                " -- bash -lc \"" + cmd + "\"");
-        }
-        else
-        {
-            Process.Start("wsl.exe", "-d " + DistroName + " -- bash -lc \"" + cmd + "\"");
-        }
+        var resumeClaudeItem = new ToolStripMenuItem("Resume Session...", null, (s, e) => ResumeSession());
+        resumeItem.DropDownItems.Add(resumeClaudeItem);
     }
 
     static void OpenTerminal()
