@@ -64,7 +64,7 @@ $UbuntuRootfsUrl = "https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-nob
 # ─── Output helpers ──────────────────────────────────────────────────────────
 
 $script:Step = 0
-$TotalSteps  = 8
+$TotalSteps  = 9
 
 function Write-Step {
     param([string]$Message)
@@ -509,7 +509,39 @@ PROVISION_EOF"
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Step 8: Final setup (shortcuts, Terminal profile, Defender, orientation)
+# Step 8: Build and launch PAI-Status tray app
+# ═════════════════════════════════════════════════════════════════════════════
+
+Write-Step "Building PAI-Status tray app..."
+
+$buildScript = Join-Path $ScriptDir "trayapp\build.ps1"
+if (Test-Path $buildScript) {
+    $buildArgs = @{
+        DistroName = $DistroName
+        Port       = $PortalPort
+        Install    = $true
+    }
+    if ($Name -ne "") {
+        $buildArgs.AppName = "PAI-Status-$Name"
+    }
+    try {
+        & $buildScript @buildArgs
+        Write-Ok "PAI-Status tray app built and running"
+    }
+    catch {
+        Write-Host "        " -NoNewline
+        Write-Host "[WARN] " -ForegroundColor Yellow -NoNewline
+        Write-Host "Tray app build failed: $_"
+        Write-Host "        PAI still works — use PowerShell scripts instead."
+    }
+} else {
+    Write-Host "        " -NoNewline
+    Write-Host "[WARN] " -ForegroundColor Yellow -NoNewline
+    Write-Host "trayapp/build.ps1 not found. Skipping tray app."
+}
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Step 9: Final setup (shortcuts, Terminal profile, Defender, orientation)
 # ═════════════════════════════════════════════════════════════════════════════
 
 Write-Step "Final setup..."

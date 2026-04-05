@@ -96,11 +96,34 @@ Open http://localhost:8080 in your browser to see the web portal. From now on, j
 ## What You Get
 
 - **Sandboxed AI** -- Claude Code runs inside an isolated WSL2 distro, not directly on your Windows machine
-- **CLI-first control** -- start sessions, check health, upgrade, and manage everything from PowerShell
+- **System tray app** -- start sessions, stop the distro, open the web portal from one icon
 - **Session resume** -- pick up previous conversations where you left off
 - **Web portal** -- a local website for viewing AI-created content and exchanging files
 - **Shared folders** -- `C:\pai-workspace\` on Windows is shared with the AI
-- **Audio** -- the AI can speak through your PC speakers (Windows 11 only, via WSLg)
+- **Health check** -- run `doctor.ps1` or use the tray menu to check system health
+- **Audio** -- the AI can speak through your PC speakers (Windows 11 via WSLg, Windows 10 optional)
+
+## The System Tray App
+
+After install, PAI-Status lives in your system tray (bottom right, near the clock). It shows a small icon with a colored dot (green = running, red = stopped).
+
+```
+PAI-Status tray menu:
+  Distro: Running
+  Start Distro / Stop Distro
+  ──────────────────
+  New PAI Session       <- opens a new AI workspace
+  Resume Session        <- pick up where you left off
+  ──────────────────
+  Open PAI Web          <- opens the web portal
+  Open a Terminal       <- plain shell (no AI)
+  ──────────────────
+  Health Check          <- runs doctor.ps1
+  Launch at Login
+  Quit PAI-Status
+```
+
+The tray app is compiled from C# source at install time using the .NET Framework compiler (`csc.exe`) that ships with every Windows 10/11 machine. No build tools or SDKs needed.
 
 ## Shared Files
 
