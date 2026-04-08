@@ -1,14 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    PAI-WSL2 Installer — Deterministic WSL2 sandbox for Claude Code on Windows.
+    PAI-WSL2 Installer -- Deterministic WSL2 sandbox for Claude Code on Windows.
 
 .DESCRIPTION
     Creates a dedicated WSL2 distro from an Ubuntu rootfs tarball, configures it
     with a 'claude' user, sets up hybrid NTFS/ext4 workspace directories, and
     provisions the sandbox with Claude Code, Bun, Node, and PAI tooling.
 
-    This script is idempotent — safe to re-run if interrupted.
+    This script is idempotent -- safe to re-run if interrupted.
 
 .PARAMETER Name
     Instance suffix for parallel installs. Default creates distro "pai" with
@@ -58,7 +58,7 @@ $LogFile      = Join-Path $ScriptDir "pai-install-$(Get-Date -Format 'yyyyMMddTH
 
 # ─── Constants ──────────────────────────────────────────────────────────────
 
-# Ubuntu Noble (24.04) WSL rootfs — "current" always points to the latest point release
+# Ubuntu Noble (24.04) WSL rootfs -- "current" always points to the latest point release
 $UbuntuRootfsUrl = "https://cloud-images.ubuntu.com/wsl/noble/current/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz"
 
 # ─── Output helpers ──────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ function Write-Log {
     Add-Content -Path $LogFile -Value "[$timestamp] $Message"
 }
 
-# Retry helper for network operations — 3 attempts, exponential backoff.
+# Retry helper for network operations -- 3 attempts, exponential backoff.
 function Invoke-WithRetry {
     param(
         [scriptblock]$Action,
@@ -178,7 +178,7 @@ Write-Log "=== PAI-WSL2 Install ($DistroName) started ==="
 
 Write-Step "Checking system requirements..."
 
-# Windows version check — need Windows 10 build 19041+ or Windows 11
+# Windows version check -- need Windows 10 build 19041+ or Windows 11
 $osVersion = [System.Environment]::OSVersion.Version
 $buildNumber = $osVersion.Build
 if ($buildNumber -lt 19041) {
@@ -206,13 +206,13 @@ if ($wslStatus -match "Default Version:\s*2" -or $wslStatus -match "WSL 2") {
     Write-Ok "WSL2 default version set"
 }
 
-# Check for WSLg — ships with Windows 11 only. Provides automatic PulseAudio
+# Check for WSLg -- ships with Windows 11 only. Provides automatic PulseAudio
 # (audio passthrough) and Wayland/X11 (GUI apps like Playwright browsers).
 # Windows 10 does NOT have WSLg; audio falls back to PowerShell passthrough.
 $hasWSLg = $false
 if ($buildNumber -ge 22000) {
     $hasWSLg = $true
-    Write-Ok "WSLg available (Windows 11 — native audio and GUI passthrough)"
+    Write-Ok "WSLg available (Windows 11 -- native audio and GUI passthrough)"
 } else {
     Write-Host "        " -NoNewline
     Write-Host "[INFO] " -ForegroundColor Yellow -NoNewline
@@ -227,7 +227,7 @@ if ($buildNumber -ge 22000) {
 
 Write-Step "Checking host tools..."
 
-# Windows Terminal — check if installed, offer to install via winget
+# Windows Terminal -- check if installed, offer to install via winget
 $wtInstalled = $false
 $wtPackage = Get-AppxPackage -Name "Microsoft.WindowsTerminal" -ErrorAction SilentlyContinue
 if ($wtPackage) {
@@ -471,7 +471,7 @@ Write-Step "Creating workspace directories..."
 # Hybrid filesystem layout:
 # - claude-home lives on ext4 inside WSL2 (/home/claude) for performance
 # - User-facing dirs live on NTFS for Windows Explorer access
-# - Automount is DISABLED (sandbox isolation) — only these dirs are mounted via fstab
+# - Automount is DISABLED (sandbox isolation) -- only these dirs are mounted via fstab
 $ntfsDirs = @("data", "exchange", "portal", "work", "upstream")
 
 if (-not (Test-Path $WorkspaceDir)) {
@@ -500,11 +500,11 @@ if ($WorkspaceDir -match ' ') {
 }
 
 # Write /etc/fstab to selectively mount workspace dirs (not the full C:\ drive).
-# This is the sandbox boundary — the AI can only see these specific directories.
-$fstabLines = @("# PAI workspace mounts — managed by install.ps1")
+# This is the sandbox boundary -- the AI can only see these specific directories.
+$fstabLines = @("# PAI workspace mounts -- managed by install.ps1")
 foreach ($dir in $ntfsDirs) {
     $winPath = "$WorkspaceDir\$dir"
-    # fstab uses space as delimiter — encode literal spaces as \040
+    # fstab uses space as delimiter -- encode literal spaces as \040
     $fstabWinPath = $winPath -replace ' ', '\040'
     $linuxPath = "/home/claude/$dir"
     $fstabLines += "${fstabWinPath} ${linuxPath} drvfs defaults,metadata,uid=1000,gid=1000 0 0"
@@ -514,7 +514,7 @@ Invoke-WslCommand "mkdir -p /home/claude/data /home/claude/exchange /home/claude
 Invoke-WslCommand "cat > /etc/fstab << 'FSTAB_EOF'
 $fstabContent
 FSTAB_EOF"
-Write-Ok "fstab configured — workspace dirs mounted selectively (no full C:\ access)"
+Write-Ok "fstab configured -- workspace dirs mounted selectively (no full C:\ access)"
 
 # --- Windows 10 audio opt-in ---
 # WSLg (Windows 11) handles audio natively. On Windows 10, audio requires
@@ -532,13 +532,13 @@ if (-not $hasWSLg) {
     Write-Host "        │  PowerShell from inside the sandbox to play     │" -ForegroundColor Yellow
     Write-Host "        │  sound files. This reduces sandbox isolation.   │" -ForegroundColor Yellow
     Write-Host "        │                                                  │" -ForegroundColor Yellow
-    Write-Host "        │  Without audio, everything else works fine —    │" -ForegroundColor Yellow
+    Write-Host "        │  Without audio, everything else works fine --    │" -ForegroundColor Yellow
     Write-Host "        │  text, code, web portal, all of it.            │" -ForegroundColor Yellow
     Write-Host "        └──────────────────────────────────────────────────┘" -ForegroundColor Yellow
     Write-Host ""
     $audioChoice = Read-Host "        Enable audio? (reduces sandbox isolation) [y/N]"
     if ($audioChoice -match '^[Yy]') {
-        # Enable interop only — still no automount of full C:\
+        # Enable interop only -- still no automount of full C:\
         Invoke-WslCommand "sed -i 's/enabled = false/enabled = true/' /etc/wsl.conf"
         Invoke-WslCommand "sed -i 's/appendWindowsPath = false/appendWindowsPath = true/' /etc/wsl.conf"
         # Mount a temp audio directory for PowerShell playback
@@ -548,9 +548,9 @@ if (-not $hasWSLg) {
         }
         Invoke-WslCommand "mkdir -p /mnt/pai-audio"
         Invoke-WslCommand "echo '${audioDir} /mnt/pai-audio drvfs defaults 0 0' >> /etc/fstab"
-        Write-Ok "Audio enabled — interop on, audio temp dir mounted at /mnt/pai-audio"
+        Write-Ok "Audio enabled -- interop on, audio temp dir mounted at /mnt/pai-audio"
     } else {
-        Write-Ok "Audio disabled — full sandbox isolation preserved"
+        Write-Ok "Audio disabled -- full sandbox isolation preserved"
     }
     Write-Host ""
 }
@@ -623,7 +623,7 @@ if (Test-Path $buildScript) {
         Write-Host "        " -NoNewline
         Write-Host "[WARN] " -ForegroundColor Yellow -NoNewline
         Write-Host "Tray app build failed: $_"
-        Write-Host "        PAI still works — use PowerShell scripts instead."
+        Write-Host "        PAI still works -- use PowerShell scripts instead."
     }
 } else {
     Write-Host "        " -NoNewline
