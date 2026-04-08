@@ -1,4 +1,4 @@
-# PAI-WSL2 — Upgrade existing installation
+# PAI-WSL2 -- Upgrade existing installation
 # Safe to run on an existing distro without losing data.
 #
 # What this upgrades:
@@ -30,7 +30,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host ""
 Write-Host ("=" * 50) -ForegroundColor Cyan
-Write-Host "  PAI-WSL2 — Upgrade" -ForegroundColor White
+Write-Host "  PAI-WSL2 -- Upgrade" -ForegroundColor White
 if ($InstanceSuffix) {
     Write-Host "  Instance: $DistroName" -ForegroundColor Cyan
 }
@@ -93,7 +93,7 @@ if (-not (Test-Path $provisionScript)) {
     exit 1
 }
 
-# Copy provision.sh into the distro (can't use /mnt/c/ — automount is disabled)
+# Copy provision.sh into the distro (can't use /mnt/c/ -- automount is disabled)
 $provisionContent = Get-Content $provisionScript -Raw
 wsl.exe -d $DistroName -u root -- bash -c "cat > /tmp/provision.sh << 'PROVISION_EOF'
 $provisionContent
@@ -107,7 +107,7 @@ if ($LASTEXITCODE -eq 0) {
     Ok "Provision script completed successfully"
 }
 else {
-    Warn "Provision script completed with warnings — check output above"
+    Warn "Provision script completed with warnings -- check output above"
 }
 
 # ─── Step 4: Upgrade Claude Code ──────────────────────────────────────────

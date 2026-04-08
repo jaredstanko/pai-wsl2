@@ -1,9 +1,9 @@
 #!/bin/bash
-# PAI-WSL2 Provisioning Script — Distro Setup
+# PAI-WSL2 Provisioning Script -- Distro Setup
 # Run this INSIDE the WSL2 distro as the 'claude' user.
 # Called automatically by install.ps1 on the Windows host.
 #
-# This script is idempotent — safe to re-run if interrupted.
+# This script is idempotent -- safe to re-run if interrupted.
 #
 # Usage:
 #   bash ~/provision.sh
@@ -76,7 +76,7 @@ fi
 
 retry "sudo apt-get update -qq"
 
-# Core packages — same set as PAI-LIMA plus WSL-specific additions
+# Core packages -- same set as PAI-LIMA plus WSL-specific additions
 # shellcheck disable=SC2086
 retry "sudo apt-get install -y -qq \
   jq fzf ripgrep fd-find sqlite3 tmux bat ffmpeg curl wget imagemagick \
@@ -93,7 +93,7 @@ if [ "$NODE_NEEDS_SETUP" = true ]; then
   log "Node.js $(node --version) installed from NodeSource"
 fi
 
-# uv — modern Python package runner
+# uv -- modern Python package runner
 if command -v uv &>/dev/null; then
   log "uv already installed: $(uv --version 2>/dev/null || echo 'present')"
 else
@@ -113,13 +113,13 @@ fi
 # ─── Audio helper: play a file through WSLg or PowerShell fallback ───────────
 # Shared function used by both 'say' and 'afplay' shims.
 # Fallback chain:
-#   1. WSLg PulseAudio (Windows 11) — ffplay via /mnt/wslg/PulseServer
-#   2. PowerShell passthrough (Windows 10) — write to NTFS, play via Windows APIs
+#   1. WSLg PulseAudio (Windows 11) -- ffplay via /mnt/wslg/PulseServer
+#   2. PowerShell passthrough (Windows 10) -- write to NTFS, play via Windows APIs
 mkdir -p "$HOME/.local/bin"
 
 cat > "$HOME/.local/bin/pai-play-audio" <<'PLAYSHIM'
 #!/bin/bash
-# pai-play-audio — play an audio file through the best available path
+# pai-play-audio -- play an audio file through the best available path
 # Usage: pai-play-audio <file.wav|file.mp3>
 FILE="$1"
 [ -z "$FILE" ] || [ ! -f "$FILE" ] && exit 1
@@ -133,12 +133,12 @@ fi
 # Fallback: PowerShell passthrough (Windows 10, requires interop opt-in)
 # If interop is disabled (user chose full sandbox), audio silently fails.
 if ! command -v powershell.exe >/dev/null 2>&1; then
-  exit 1  # interop disabled — no audio available, fail silently
+  exit 1  # interop disabled -- no audio available, fail silently
 fi
 
 AUDIO_DIR="/mnt/pai-audio"
 if [ ! -d "$AUDIO_DIR" ]; then
-  exit 1  # audio mount not configured — user declined audio during install
+  exit 1  # audio mount not configured -- user declined audio during install
 fi
 
 BASENAME=$(basename "$FILE")
@@ -164,7 +164,7 @@ log "pai-play-audio helper installed (WSLg -> PowerShell fallback)"
 # ─── Install 'say' shim ─────────────────────────────────────────────────────
 cat > "$HOME/.local/bin/say" <<'SAYSHIM'
 #!/bin/bash
-# say — Linux shim for macOS 'say' command
+# say -- Linux shim for macOS 'say' command
 # Fallback chain: Kokoro TTS -> espeak-ng via pai-play-audio
 TEXT="$*"
 [ -z "$TEXT" ] && exit 0
@@ -202,7 +202,7 @@ log "Linux 'say' shim installed (Kokoro -> espeak-ng, WSLg/PowerShell audio)"
 # ─── Install 'afplay' shim ──────────────────────────────────────────────────
 cat > "$HOME/.local/bin/afplay" <<'AFSHIM'
 #!/bin/bash
-# afplay — Linux shim for macOS afplay command
+# afplay -- Linux shim for macOS afplay command
 # Routes audio through pai-play-audio (WSLg or PowerShell fallback)
 FILE=""
 while [ $# -gt 0 ]; do
@@ -315,7 +315,7 @@ export PATH="$HOME/go/bin:$PATH"
 # Node global (npm install -g)
 export PATH="$HOME/.npm-global/bin:$PATH"
 
-# WSLg PulseAudio (Windows 11 only) — set only if socket exists
+# WSLg PulseAudio (Windows 11 only) -- set only if socket exists
 if [ -e /mnt/wslg/PulseServer ]; then
   export PULSE_SERVER=unix:/mnt/wslg/PulseServer
 fi
@@ -425,24 +425,24 @@ ENVEOF
 TRUSTEOF
     log "Claude Code workspaces pre-trusted"
   else
-    log "Claude Code config already exists — skipping trust setup"
+    log "Claude Code config already exists -- skipping trust setup"
   fi
 else
-  warn "$HOME/.claude mount not writable — skipping .env write"
+  warn "$HOME/.claude mount not writable -- skipping .env write"
 fi
 
 # ─── Step 4c: Verify workspace mounts ────────────────────────────────────
 step "4c" "Checking workspace mounts..."
 
 # Workspace directories are mounted via /etc/fstab (configured by install.ps1).
-# Automount of C:\ is disabled for sandbox isolation — only these dirs are shared.
+# Automount of C:\ is disabled for sandbox isolation -- only these dirs are shared.
 USER_DIRS="data exchange portal work upstream"
 
 for dir in $USER_DIRS; do
   if [ -d "$HOME/$dir" ]; then
     log "~/$dir mounted"
   else
-    warn "~/$dir not mounted — fstab may need a distro restart"
+    warn "~/$dir not mounted -- fstab may need a distro restart"
   fi
 done
 
@@ -460,7 +460,7 @@ else
     rm -rf /tmp/pai-companion
     log "PAI Companion cloned to ~/pai-companion"
   else
-    warn "Failed to clone pai-companion — you can clone it manually later."
+    warn "Failed to clone pai-companion -- you can clone it manually later."
   fi
 fi
 
@@ -516,5 +516,5 @@ log "Workspace:    symlinked to ${NTFS_WORKSPACE}/"
 log "Audio:        WSLg PulseAudio at /mnt/wslg/PulseServer"
 log "Log:          $LOG_FILE"
 echo ""
-warn "Next steps — follow the instructions shown by the installer on Windows."
+warn "Next steps -- follow the instructions shown by the installer on Windows."
 echo ""

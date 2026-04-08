@@ -1,4 +1,4 @@
-# PAI-WSL2 — Shared PowerShell helpers
+# PAI-WSL2 -- Shared PowerShell helpers
 # Source this file at the top of every script to get instance-aware variables.
 #
 # Parses -Name and -Port parameters and sets:
@@ -12,7 +12,7 @@
 #   $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 #   . "$ScriptDir\common.ps1"
 #
-# PowerShell 5.1 compatible — no ternary, no null-coalescing, no ?. operator.
+# PowerShell 5.1 compatible -- no ternary, no null-coalescing, no ?. operator.
 
 # ─── Parameter parsing ──────────────────────────────────────────────────────
 # Scripts that source this file should define $Name and $Port before sourcing,
@@ -147,7 +147,7 @@ function Start-PaiDistro {
     }
     if ($status -ne 'Running') {
         Write-Host "Starting distro '$script:DistroName'..."
-        # Start by running a trivial command — WSL auto-starts the distro
+        # Start by running a trivial command -- WSL auto-starts the distro
         wsl.exe -d $script:DistroName -- echo 'started' | Out-Null
         Write-Host "Distro started." -ForegroundColor Green
     }

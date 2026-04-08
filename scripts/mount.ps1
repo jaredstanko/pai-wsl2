@@ -1,4 +1,4 @@
-# PAI-WSL2 — Dynamic Folder Sharing
+# PAI-WSL2 -- Dynamic Folder Sharing
 # Adds an fstab entry to mount a Windows directory into the distro.
 # Requires a distro restart (~2 seconds) to apply the mount.
 #

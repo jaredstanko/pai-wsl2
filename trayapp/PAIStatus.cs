@@ -5,7 +5,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
-// PAI-Status — System tray app for PAI-WSL2
+// PAI-Status -- System tray app for PAI-WSL2
 // Compiled at install time with csc.exe (ships with .NET Framework on every Windows 10/11).
 // Equivalent of PAI-LIMA's Swift menu bar app.
 //
@@ -21,7 +21,7 @@ using System.Windows.Forms;
 
 class PAIStatus
 {
-    // Instance configuration — replaced by build.ps1 via sed for named instances
+    // Instance configuration -- replaced by build.ps1 via sed for named instances
     private static string DistroName = "pai";
     private static string PortalUrl = "http://localhost:8080";
     private static string AppName = "PAI-Status";
@@ -48,7 +48,7 @@ class PAIStatus
         // Resolve repo directory from exe location
         string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
         string exeDir = Path.GetDirectoryName(exePath);
-        // Exe lives in trayapp/build/ — repo root is two levels up
+        // Exe lives in trayapp/build/ -- repo root is two levels up
         RepoDir = Path.GetFullPath(Path.Combine(exeDir, "..", ".."));
 
         // Build tray icon

@@ -1,4 +1,4 @@
-# PAI-WSL2 — Host-Side Verification
+# PAI-WSL2 -- Host-Side Verification
 # Checks that the full system is installed and functional from the Windows side,
 # then runs verify.sh inside the distro for WSL-side checks.
 #
@@ -58,7 +58,7 @@ function Failed {
 
 Write-Host ""
 Write-Host ("=" * 50) -ForegroundColor Cyan
-Write-Host "  PAI-WSL2 — System Verification" -ForegroundColor White
+Write-Host "  PAI-WSL2 -- System Verification" -ForegroundColor White
 if ($InstanceSuffix) {
     Write-Host "  Instance: $DistroName" -ForegroundColor Cyan
 }
@@ -76,10 +76,10 @@ Write-Host "  ──────────────────────
 $osVersion = [System.Environment]::OSVersion.Version
 $osBuild = $osVersion.Build
 if ($osBuild -ge 19041) {
-    Passed "Windows version" "($osBuild — WSL2 supported)"
+    Passed "Windows version" "($osBuild -- WSL2 supported)"
 }
 else {
-    Failed "Windows version" "($osBuild — WSL2 requires build 19041+)"
+    Failed "Windows version" "($osBuild -- WSL2 requires build 19041+)"
 }
 
 # WSL2 enabled
@@ -103,7 +103,7 @@ if ($distroStatus -eq 'Running') {
     Passed "Distro '$DistroName'" "(running)"
 }
 elseif ($distroStatus -eq 'Stopped') {
-    Failed "Distro '$DistroName'" "(stopped — expected running)"
+    Failed "Distro '$DistroName'" "(stopped -- expected running)"
 }
 else {
     Failed "Distro '$DistroName'" "(not found)"
@@ -115,7 +115,7 @@ if ($wtPath) {
     Passed "Windows Terminal" "(wt.exe found)"
 }
 else {
-    Failed "Windows Terminal" "(wt.exe not found — optional but recommended)"
+    Failed "Windows Terminal" "(wt.exe not found -- optional but recommended)"
 }
 
 # Workspace directories
@@ -141,16 +141,16 @@ Write-Host "  WSL2 Distro ($DistroName)" -ForegroundColor White
 Write-Host "  ──────────────────────────────────────────────"
 
 if ($distroStatus -eq 'NotFound') {
-    Failed "WSL2 distro '$DistroName'" "(does not exist — cannot run internal checks)"
+    Failed "WSL2 distro '$DistroName'" "(does not exist -- cannot run internal checks)"
 }
 elseif ($distroStatus -ne 'Running') {
-    Failed "WSL2 distro '$DistroName'" "(not running — cannot run internal checks)"
+    Failed "WSL2 distro '$DistroName'" "(not running -- cannot run internal checks)"
 }
 else {
     # Copy verify.sh into the distro and run it, parsing its output
     $verifyScript = Join-Path $ScriptDir 'verify.sh'
     if (Test-Path $verifyScript) {
-        # Copy verify.sh into distro and run it (can't use /mnt/c/ — automount disabled)
+        # Copy verify.sh into distro and run it (can't use /mnt/c/ -- automount disabled)
         $verifyContent = Get-Content $verifyScript -Raw
         wsl.exe -d $DistroName -u root -- bash -c "cat > /tmp/verify.sh << 'VERIFY_EOF'
 $verifyContent

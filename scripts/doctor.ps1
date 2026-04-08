@@ -1,4 +1,4 @@
-# PAI-WSL2 — Health Check (Doctor)
+# PAI-WSL2 -- Health Check (Doctor)
 # Comprehensive diagnostic command that checks all aspects of the PAI-WSL2
 # installation and provides actionable suggestions for each issue found.
 #
@@ -81,7 +81,7 @@ function DoctorFail {
 
 Write-Host ""
 Write-Host ("=" * 55) -ForegroundColor Cyan
-Write-Host "  PAI-WSL2 — Doctor (Health Check)" -ForegroundColor White
+Write-Host "  PAI-WSL2 -- Doctor (Health Check)" -ForegroundColor White
 if ($InstanceSuffix) {
     Write-Host "  Instance: $DistroName" -ForegroundColor Cyan
 }
@@ -113,13 +113,13 @@ catch {
 # Windows build
 $osBuild = [System.Environment]::OSVersion.Version.Build
 if ($osBuild -ge 22000) {
-    DoctorPass "Windows 11" "(build $osBuild — WSLg supported)"
+    DoctorPass "Windows 11" "(build $osBuild -- WSLg supported)"
 }
 elseif ($osBuild -ge 19041) {
-    DoctorWarn "Windows 10" "(build $osBuild — no WSLg, no audio/GUI passthrough)" "Upgrade to Windows 11 for WSLg audio and GUI support"
+    DoctorWarn "Windows 10" "(build $osBuild -- no WSLg, no audio/GUI passthrough)" "Upgrade to Windows 11 for WSLg audio and GUI support"
 }
 else {
-    DoctorFail "Windows version" "(build $osBuild — WSL2 requires 19041+)" "Update Windows to build 19041 or later"
+    DoctorFail "Windows version" "(build $osBuild -- WSL2 requires 19041+)" "Update Windows to build 19041 or later"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -136,7 +136,7 @@ if ($distroStatus -eq 'NotFound') {
     DoctorFail "Distro '$DistroName'" "(not found)" "Run install.ps1 to create the distro"
     # Can't do further WSL checks without a distro
     Write-Host ""
-    Write-Host "  Cannot run distro-internal checks — distro does not exist." -ForegroundColor Yellow
+    Write-Host "  Cannot run distro-internal checks -- distro does not exist." -ForegroundColor Yellow
 }
 else {
     if ($distroStatus -eq 'Running') {
@@ -207,14 +207,14 @@ if (Test-Path $wslConfigPath) {
     DoctorPass ".wslconfig found" "(networking: $networkMode)"
 }
 else {
-    DoctorWarn ".wslconfig" "(not found — using defaults)" "Create $wslConfigPath to configure memory/network limits"
+    DoctorWarn ".wslconfig" "(not found -- using defaults)" "Create $wslConfigPath to configure memory/network limits"
 }
 
 if ($networkMode -eq 'mirrored') {
-    DoctorPass "Networking mode" "(mirrored — localhost shared)"
+    DoctorPass "Networking mode" "(mirrored -- localhost shared)"
 }
 else {
-    DoctorPass "Networking mode" "(NAT — default)"
+    DoctorPass "Networking mode" "(NAT -- default)"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -374,14 +374,14 @@ if ($memoryLimit) {
 }
 else {
     $totalRamGB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 1)
-    DoctorWarn "Memory limit" "(not set — WSL2 can use up to 50% of ${totalRamGB}GB)" "Set [wsl2] memory=8GB in $wslConfigPath"
+    DoctorWarn "Memory limit" "(not set -- WSL2 can use up to 50% of ${totalRamGB}GB)" "Set [wsl2] memory=8GB in $wslConfigPath"
 }
 
 if ($swapLimit) {
     DoctorPass "Swap limit" "($swapLimit in .wslconfig)"
 }
 else {
-    DoctorWarn "Swap limit" "(not set — defaults to 25% of RAM)" "Set [wsl2] swap=4GB in $wslConfigPath"
+    DoctorWarn "Swap limit" "(not set -- defaults to 25% of RAM)" "Set [wsl2] swap=4GB in $wslConfigPath"
 }
 
 # Actual memory usage inside WSL

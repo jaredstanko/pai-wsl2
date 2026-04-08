@@ -1,4 +1,4 @@
-# PAI-WSL2 — Backup and Restore
+# PAI-WSL2 -- Backup and Restore
 # Creates full backups of the WSL2 distro and workspace, and restores them.
 #
 # Backup includes:
@@ -64,7 +64,7 @@ function Do-Backup {
 
     Write-Host ""
     Write-Host ("=" * 50) -ForegroundColor Cyan
-    Write-Host "  PAI-WSL2 — Backup" -ForegroundColor White
+    Write-Host "  PAI-WSL2 -- Backup" -ForegroundColor White
     Write-Host "  Distro: $DistroName" -ForegroundColor Cyan
     Write-Host "  Destination: $destDir\" -ForegroundColor Cyan
     Write-Host ("=" * 50) -ForegroundColor Cyan
@@ -107,7 +107,7 @@ function Do-Backup {
         Ok "Workspace copied"
     }
     else {
-        Warn "Workspace '$Workspace' not found — skipping"
+        Warn "Workspace '$Workspace' not found -- skipping"
     }
 
     # Restart distro if it was running
@@ -127,7 +127,7 @@ function Do-Backup {
 function Do-Restore {
     Write-Host ""
     Write-Host ("=" * 50) -ForegroundColor Cyan
-    Write-Host "  PAI-WSL2 — Restore" -ForegroundColor White
+    Write-Host "  PAI-WSL2 -- Restore" -ForegroundColor White
     Write-Host "  Target distro: $DistroName" -ForegroundColor Cyan
     Write-Host ("=" * 50) -ForegroundColor Cyan
     Write-Host ""
@@ -225,7 +225,7 @@ function Do-Restore {
                 Ok "Workspace restored"
             }
             else {
-                Warn "Workspace not restored — existing data kept"
+                Warn "Workspace not restored -- existing data kept"
             }
         }
         else {
@@ -234,7 +234,7 @@ function Do-Restore {
         }
     }
     else {
-        Warn "No workspace data in this backup — skipping"
+        Warn "No workspace data in this backup -- skipping"
     }
 
     Write-Host ""

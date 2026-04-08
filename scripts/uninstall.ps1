@@ -1,4 +1,4 @@
-# PAI-WSL2 — Clean Removal
+# PAI-WSL2 -- Clean Removal
 # Removes the WSL2 distro and optionally the workspace data.
 #
 # What this removes:
@@ -29,7 +29,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host ""
 Write-Host ("=" * 50) -ForegroundColor Red
-Write-Host "  PAI-WSL2 — Uninstall" -ForegroundColor White
+Write-Host "  PAI-WSL2 -- Uninstall" -ForegroundColor White
 if ($InstanceSuffix) {
     Write-Host "  Instance: $DistroName" -ForegroundColor Red
 }
@@ -133,11 +133,11 @@ if (Test-Path $Workspace -PathType Container) {
     Write-Host ""
     Write-Host "        This includes:"
     Write-Host "          (claude-home lives inside WSL2 at /home/claude/)"
-    Write-Host "          - work\        — Projects and work-in-progress"
-    Write-Host "          - data\        — Persistent data"
-    Write-Host "          - exchange\    — File exchange"
-    Write-Host "          - portal\      — Web portal content"
-    Write-Host "          - upstream\    — Reference repos"
+    Write-Host "          - work\        -- Projects and work-in-progress"
+    Write-Host "          - data\        -- Persistent data"
+    Write-Host "          - exchange\    -- File exchange"
+    Write-Host "          - portal\      -- Web portal content"
+    Write-Host "          - upstream\    -- Reference repos"
     Write-Host ""
 
     # Show directory sizes
@@ -155,7 +155,7 @@ if (Test-Path $Workspace -PathType Container) {
         Ok "Removed $Workspace\"
     }
     else {
-        Warn "Kept $Workspace\ — you can remove it manually later"
+        Warn "Kept $Workspace\ -- you can remove it manually later"
     }
 }
 else {

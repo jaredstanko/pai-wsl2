@@ -1,5 +1,5 @@
 #!/bin/bash
-# PAI-WSL2 — WSL-Side Verification
+# PAI-WSL2 -- WSL-Side Verification
 # Checks that all tools and configuration are present inside the WSL2 distro.
 # Uses 2-state model: PASS (present and working), FAIL (missing or broken).
 #
@@ -144,7 +144,7 @@ fi
 if [ -e "/mnt/wslg/PulseServer" ]; then
   passed "WSLg PulseAudio socket" "(/mnt/wslg/PulseServer)"
 else
-  failed "WSLg PulseAudio socket" "(/mnt/wslg/PulseServer not found — WSLg may not be enabled)"
+  failed "WSLg PulseAudio socket" "(/mnt/wslg/PulseServer not found -- WSLg may not be enabled)"
 fi
 
 # ─── Summary ────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-# PAI-WSL2 — Launch PAI sessions
+# PAI-WSL2 -- Launch PAI sessions
 # Opens a Windows Terminal tab (or falls back to wsl.exe) running PAI.
 #
 # Usage:
@@ -62,7 +62,7 @@ if ($action -eq 'shell') {
         wt.exe -w 0 new-tab --title $title -- wsl.exe -d $DistroName -- bash -l
     }
     else {
-        Write-Host "(Windows Terminal not found — launching directly)" -ForegroundColor Yellow
+        Write-Host "(Windows Terminal not found -- launching directly)" -ForegroundColor Yellow
         Start-Process wsl.exe -ArgumentList "-d", $DistroName, "--", "bash", "-l"
     }
 }
@@ -78,7 +78,7 @@ else {
         wt.exe -w 0 new-tab --title $title -- wsl.exe -d $DistroName -- bash -lc $bashCmd
     }
     else {
-        Write-Host "(Windows Terminal not found — launching directly)" -ForegroundColor Yellow
+        Write-Host "(Windows Terminal not found -- launching directly)" -ForegroundColor Yellow
         Start-Process wsl.exe -ArgumentList "-d", $DistroName, "--", "bash", "-lc", $bashCmd
     }
 }

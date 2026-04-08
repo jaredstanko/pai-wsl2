@@ -1,6 +1,6 @@
 # Build PAI-Status tray app
 # Compiles PAIStatus.cs using csc.exe (ships with .NET Framework on every Windows 10/11).
-# Same pattern as PAI-LIMA's swiftc build — compile from source at install time.
+# Same pattern as PAI-LIMA's swiftc build -- compile from source at install time.
 #
 # Usage:
 #   .\trayapp\build.ps1                                    # Build default instance
@@ -34,7 +34,7 @@ if (-not (Test-Path $cscPath)) {
 }
 if (-not (Test-Path $cscPath)) {
     Write-Host "ERROR: csc.exe not found. .NET Framework 4.x is required." -ForegroundColor Red
-    Write-Host "       This ships with Windows 10/11 — check your installation." -ForegroundColor Red
+    Write-Host "       This ships with Windows 10/11 -- check your installation." -ForegroundColor Red
     exit 1
 }
 Write-Host "  Compiler: $cscPath"
